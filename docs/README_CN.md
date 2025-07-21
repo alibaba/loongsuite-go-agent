@@ -106,6 +106,7 @@ $ otel go build -gcflags="-m" cmd/app
 | zerolog       | https://github.com/rs/zerolog                  | v1.10.0               | v1.33.0               |
 | go-kit/log    | https://github.com/go-kit/log                  | v0.1.0                | v0.2.1                |
 | pg            | https://github.com/go-pg/pg                    | v1.10.0               | v1.14.0               |
+| rocketmq      | https://github.com/apache/rocketmq-client-go   | v2.0.0  | v2.1.2   |
 
 我们正在逐步开源我们支持的库，非常欢迎您的贡献💖！
 

@@ -1,0 +1,37 @@
+[
+  {
+    "Version": "[2.0.0,)",
+    "ImportPath": "github.com/apache/rocketmq-client-go/v2/producer",
+    "Function": "sendSync",
+    "ReceiverType": "\\*defaultProducer",
+    "OnEnter": "producerSendSyncOnEnter",
+    "OnExit": "producerSendSyncOnExit",
+    "Path": "github.com/alibaba/opentelemetry-go-auto-instrumentation/pkg/rules/rocketmq"
+  },
+  {
+    "Version": "[2.0.0,)",
+    "ImportPath": "github.com/apache/rocketmq-client-go/v2/producer",
+    "Function": "sendAsync",
+    "ReceiverType": "\\*defaultProducer",
+    "OnEnter": "producerSendAsyncOnEnter",
+    "Path": "github.com/alibaba/opentelemetry-go-auto-instrumentation/pkg/rules/rocketmq"
+  },
+  {
+    "Version": "[2.0.0,)",
+    "ImportPath": "github.com/apache/rocketmq-client-go/v2/producer",
+    "Function": "sendOneWay",
+    "ReceiverType": "\\*defaultProducer",
+    "OnEnter": "producerSendOneWayOnEnter",
+    "OnExit": "producerSendOneWayOnExit",
+    "Path": "github.com/alibaba/opentelemetry-go-auto-instrumentation/pkg/rules/rocketmq"
+  },
+  {
+    "Version": "[2.0.0,)",
+    "ImportPath": "github.com/apache/rocketmq-client-go/v2/consumer",
+    "Function": "consumeInner",
+    "ReceiverType": "\\*pushConsumer",
+    "OnEnter": "consumerConsumeInnerOnEnter",
+    "OnExit": "consumerConsumeInnerOnExit",
+    "Path": "github.com/alibaba/opentelemetry-go-auto-instrumentation/pkg/rules/rocketmq"
+  }
+]

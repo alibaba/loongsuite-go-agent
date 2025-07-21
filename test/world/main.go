@@ -23,6 +23,8 @@ import (
 	_ "runtime"
 
 	_ "dubbo.apache.org/dubbo-go/v3/filter/graceful_shutdown"
+	_ "github.com/apache/rocketmq-client-go/v2/consumer"
+	_ "github.com/apache/rocketmq-client-go/v2/producer"
 	_ "github.com/cloudwego/hertz/pkg/app/server"
 	_ "github.com/gin-gonic/gin"
 	_ "github.com/go-kratos/kratos/v2/transport/grpc"
