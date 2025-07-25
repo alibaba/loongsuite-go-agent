@@ -24,8 +24,9 @@ import (
 
 	"github.com/alibaba/loongsuite-go-agent/tool/data"
 	"github.com/alibaba/loongsuite-go-agent/tool/ex"
-	"github.com/alibaba/loongsuite-go-agent/tool/resource"
+	"github.com/alibaba/loongsuite-go-agent/tool/rules"
 	"github.com/alibaba/loongsuite-go-agent/tool/util"
+	"golang.org/x/mod/modfile"
 )
 
 const (
@@ -49,6 +50,30 @@ var otelDeps = map[string]string{
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric":            "v1.35.0",
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace":             "v1.35.0",
 	"go.opentelemetry.io/otel/exporters/zipkin":                         "v1.35.0",
+}
+
+func parseGoMod(gomod string) (*modfile.File, error) {
+	data, err := util.ReadFile(gomod)
+	if err != nil {
+		return nil, ex.Error(err)
+	}
+	modFile, err := modfile.Parse(util.GoModFile, []byte(data), nil)
+	if err != nil {
+		return nil, ex.Error(err)
+	}
+	return modFile, nil
+}
+
+func writeGoMod(gomod string, modfile *modfile.File) error {
+	bs, err := modfile.Format()
+	if err != nil {
+		return ex.Error(err)
+	}
+	_, err = util.WriteFile(gomod, string(bs))
+	if err != nil {
+		return ex.Error(err)
+	}
+	return nil
 }
 
 func extractGZip(data []byte, targetDir string) error {
@@ -153,8 +178,8 @@ func findModCacheDir() (string, error) {
 	return filepath.Join(tempPkg, "pkg"), nil
 }
 
-// rectifyRule rectifies the file rules path to the local module cache path.
-func (dp *DepProcessor) rectifyRule(bundles []*resource.RuleBundle) error {
+// updateRule rectifies the file rules path to the local module cache path.
+func (dp *DepProcessor) updateRule(bundles []*rules.RuleBundle) error {
 	util.GuaranteeInPreprocess()
 	defer util.PhaseTimer("Fetch")()
 	modfile, err := parseGoMod(dp.getGoModPath())
@@ -218,7 +243,7 @@ func (dp *DepProcessor) rectifyRule(bundles []*resource.RuleBundle) error {
 	return nil
 }
 
-func (dp *DepProcessor) rectifyMod() error {
+func (dp *DepProcessor) updateGoMod() error {
 	// Backup go.mod and go.sum files
 	gomodDir := dp.getGoModDir()
 	files := []string{}
@@ -285,11 +310,7 @@ func (dp *DepProcessor) rectifyMod() error {
 		}
 	}
 	if changed {
-		bs, err := modfile.Format()
-		if err != nil {
-			return ex.Error(err)
-		}
-		_, err = util.WriteFile(dp.getGoModPath(), string(bs))
+		err = writeGoMod(dp.getGoModPath(), modfile)
 		if err != nil {
 			return ex.Error(err)
 		}

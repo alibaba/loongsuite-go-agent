@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package ast
 
 import (
 	"fmt"
-	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
 	"regexp"
 
-	"github.com/alibaba/loongsuite-go-agent/tool/ex"
+	"github.com/alibaba/loongsuite-go-agent/tool/util"
 	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
 )
 
 const (
@@ -234,7 +230,7 @@ func SwitchCase(list []dst.Expr, stmts []dst.Stmt) *dst.CaseClause {
 
 func AddStructField(decl dst.Decl, name string, typ string) {
 	gen, ok := decl.(*dst.GenDecl)
-	Assert(ok, "decl is not a GenDecl")
+	util.Assert(ok, "decl is not a GenDecl")
 	fd := NewField(name, Ident(typ))
 	st := gen.Specs[0].(*dst.TypeSpec).Type.(*dst.StructType)
 	st.Fields.List = append(st.Fields.List, fd)
@@ -343,7 +339,7 @@ func isValidRegex(pattern string) bool {
 }
 
 func MatchFuncDecl(decl dst.Decl, function string, receiverType string) bool {
-	Assert(isValidRegex(function), "invalid function name pattern")
+	util.Assert(isValidRegex(function), "invalid function name pattern")
 
 	funcDecl, ok := decl.(*dst.FuncDecl)
 	if !ok {
@@ -374,7 +370,7 @@ func MatchFuncDecl(decl dst.Decl, function string, receiverType string) bool {
 			return false
 		default:
 			msg := fmt.Sprintf("unexpected receiver type: %T", recvTypeExpr)
-			UnimplementedT(msg)
+			util.UnimplementedT(msg)
 		}
 	} else {
 		if HasReceiver(funcDecl) {
@@ -395,114 +391,4 @@ func MatchStructDecl(decl dst.Decl, structType string) bool {
 		}
 	}
 	return false
-}
-
-// AST Parser
-// @@ N.B. DST framework provides a series of RestoreResolvers such
-// as guess.New for resolving the package name from an importPath.
-// However, its strategy is simply to guess by taking last section
-// of the importpath as the package name. This can lead to issues
-// where package names like github.com/foo/v2 are resolved as v2,
-// while in reality, they might be foo. Incorrect resolutions can
-// lead to some imports that should be present being rudely removed.
-// To solve this issue, we disable DST's automatic Import management
-// and use plain AST manipulation to add imports.
-
-type AstParser struct {
-	fset *token.FileSet
-	dec  *decorator.Decorator
-}
-
-func NewAstParser() *AstParser {
-	return &AstParser{
-		fset: token.NewFileSet(),
-	}
-}
-
-func (ap *AstParser) FindPosition(node dst.Node) token.Position {
-	astNode := ap.dec.Ast.Nodes[node]
-	if astNode == nil {
-		return token.Position{Filename: "", Line: -1, Column: -1} // Invalid
-	}
-	return ap.fset.Position(astNode.Pos())
-}
-
-// ParseSnippet parses the AST from incomplete source code snippet.
-func (ap *AstParser) ParseSnippet(codeSnippet string) ([]dst.Stmt, error) {
-	Assert(codeSnippet != "", "empty code snippet")
-	snippet := "package main; func _() {" + codeSnippet + "}"
-	file, err := decorator.ParseFile(ap.fset, "", snippet, 0)
-	if err != nil {
-		return nil, ex.Error(err)
-	}
-	return file.Decls[0].(*dst.FuncDecl).Body.List, nil
-}
-
-// ParseSource parses the AST from complete source code.
-func (ap *AstParser) ParseSource(source string) (*dst.File, error) {
-	Assert(source != "", "empty source")
-	ap.dec = decorator.NewDecorator(ap.fset)
-	dstRoot, err := ap.dec.Parse(source)
-	if err != nil {
-		return nil, ex.Error(err)
-	}
-	return dstRoot, nil
-}
-
-func (ap *AstParser) ParseFile(filePath string, mode parser.Mode) (*dst.File, error) {
-	name := filepath.Base(filePath)
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, ex.Error(err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			ex.Fatal(err)
-		}
-	}(file)
-	astFile, err := parser.ParseFile(ap.fset, name, file, mode)
-	if err != nil {
-		return nil, ex.Error(err)
-	}
-	ap.dec = decorator.NewDecorator(ap.fset)
-	dstFile, err := ap.dec.DecorateFile(astFile)
-	if err != nil {
-		return nil, ex.Error(err)
-	}
-	return dstFile, nil
-}
-
-func ParseAstFromFileOnlyPackage(filePath string) (*dst.File, error) {
-	return NewAstParser().ParseFile(filePath, parser.PackageClauseOnly)
-}
-
-func ParseAstFromFileFast(filePath string) (*dst.File, error) {
-	return NewAstParser().ParseFile(filePath, parser.SkipObjectResolution)
-}
-
-// ParseAstFromFile parses the AST from complete source file.
-func ParseAstFromFile(filePath string) (*dst.File, error) {
-	return NewAstParser().ParseFile(filePath, parser.ParseComments)
-}
-
-// WriteAstToFile writes the AST to source file.
-func WriteAstToFile(astRoot *dst.File, filePath string) (string, error) {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return "", ex.Error(err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			ex.Fatal(err)
-		}
-	}(file)
-
-	r := decorator.NewRestorer()
-	err = r.Fprint(file, astRoot)
-	if err != nil {
-		return "", ex.Error(err)
-	}
-	return file.Name(), nil
 }

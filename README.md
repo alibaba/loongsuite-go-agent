@@ -15,15 +15,11 @@ time. Simply adding `otel` prefix to `go build` to get started :rocket:
 
 ### Prebuilt Binaries
 
-| OS | Architecture | Download |
-| -- | -- | -- |
-| Linux | AMD64 | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-amd64) |
-| Linux | ARM64 | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-amd64) |
-| MacOS | AMD64 | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-amd64) |
-| MacOS | ARM64 | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-arm64) |
-| Windows | AMD64 | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-windows-amd64.exe) |
+| Linux AMD64 | Linux ARM64 | MacOS AMD64 | MacOS ARM64 | Windows AMD64 |
+| -- | -- | -- | -- | -- |
+| [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-amd64) | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-arm64) | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-amd64) | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-arm64) | [Download](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-windows-amd64.exe) | 
 
-:airplane: **This is the recommended way to install the tool.**
+**This is the recommended way to install the tool.**
 
 ### Install via Bash
 For Linux and MacOS users, the following script will install `otel` in `/usr/local/bin/otel` by default:
@@ -73,8 +69,7 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/usage.md).
 - [nethttp](./example/nethttp) - HTTP monitoring example showcasing automatic instrumentation of request/response headers and network traffic analysis.
 
 # Supported Libraries
-
-| Plugin Name   | Repository Url                                 | Min Supported Version | Max Supported Version |
+| Library       | Repository Url                                 | Min           Version | Max           Version |
 |---------------|------------------------------------------------|-----------------------|-----------------------|
 | database/sql  | https://pkg.go.dev/database/sql                | -                     | -                     |
 | dubbo-go      | https://github.com/apache/dubbo-go             | v3.3.0                | -                     |
@@ -110,7 +105,7 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/usage.md).
 | go-kit/log    | https://github.com/go-kit/log                  | v0.1.0                | v0.2.1                |
 | pg            | https://github.com/go-pg/pg                    | v1.10.0               | v1.14.0               |
 
-We are progressively open-sourcing the libraries we have supported, and your contributions are very welcome 💖!
+We are progressively open-sourcing the libraries we have supported, and your contributions are [**very welcome** 💖!](https://github.com/alibaba/loongsuite-go-agent/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22contribution%20welcome%22)
 
 > [!IMPORTANT]
 > The framework you expected is not in the list? Don't worry, you can easily inject your code into any frameworks/libraries that are not officially supported.

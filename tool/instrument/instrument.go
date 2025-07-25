@@ -20,9 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alibaba/loongsuite-go-agent/tool/ast"
 	"github.com/alibaba/loongsuite-go-agent/tool/config"
 	"github.com/alibaba/loongsuite-go-agent/tool/ex"
-	"github.com/alibaba/loongsuite-go-agent/tool/resource"
+	"github.com/alibaba/loongsuite-go-agent/tool/rules"
 	"github.com/alibaba/loongsuite-go-agent/tool/util"
 	"github.com/dave/dst"
 )
@@ -42,11 +43,11 @@ type RuleProcessor struct {
 	// The target file to be instrumented
 	target *dst.File
 	// The parser for the target file
-	parser *util.AstParser
+	parser *ast.AstParser
 	// The compiling arguments for the target file
 	compileArgs []string
 	// Randomly generated suffix for the rule, used to avoid name collision
-	rule2Suffix map[*resource.InstFuncRule]string
+	rule2Suffix map[*rules.InstFuncRule]string
 	// The target function to be instrumented
 	rawFunc *dst.FuncDecl
 	// Whether the rule is exact match with target function, or it's a regexp match
@@ -83,7 +84,7 @@ func newRuleProcessor(args []string, pkgName string) *RuleProcessor {
 		workDir:     outputDir,
 		target:      nil,
 		compileArgs: args,
-		rule2Suffix: make(map[*resource.InstFuncRule]string),
+		rule2Suffix: make(map[*rules.InstFuncRule]string),
 		relocated:   make(map[string]string),
 	}
 	return rp
@@ -179,7 +180,7 @@ func (rp *RuleProcessor) saveDebugFile(path string) {
 	}
 }
 
-func (rp *RuleProcessor) applyRules(bundle *resource.RuleBundle) (err error) {
+func (rp *RuleProcessor) applyRules(bundle *rules.RuleBundle) (err error) {
 	// Apply file instrument rules first
 	err = rp.applyFileRules(bundle)
 	if err != nil {
@@ -208,7 +209,7 @@ func matchImportPath(importPath string, args []string) bool {
 	return false
 }
 
-func compileRemix(bundle *resource.RuleBundle, args []string) error {
+func compileRemix(bundle *rules.RuleBundle, args []string) error {
 	rp := newRuleProcessor(args, bundle.PackageName)
 	err := rp.applyRules(bundle)
 	if err != nil {
@@ -238,7 +239,7 @@ func Instrument() error {
 		if config.GetConf().Verbose {
 			util.Log("RunCmd: %v", args)
 		}
-		bundles, err := resource.LoadRuleBundles()
+		bundles, err := rules.LoadRuleBundles()
 		if err != nil {
 			return ex.Errorf(err, "failed to load rule bundles %v", args)
 		}

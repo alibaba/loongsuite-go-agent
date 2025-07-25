@@ -20,11 +20,11 @@ import (
 	"strings"
 
 	"github.com/alibaba/loongsuite-go-agent/tool/ex"
-	"github.com/alibaba/loongsuite-go-agent/tool/resource"
+	"github.com/alibaba/loongsuite-go-agent/tool/rules"
 	"github.com/alibaba/loongsuite-go-agent/tool/util"
 )
 
-func (rp *RuleProcessor) applyFileRules(bundle *resource.RuleBundle) (err error) {
+func (rp *RuleProcessor) applyFileRules(bundle *rules.RuleBundle) (err error) {
 	for _, rule := range bundle.FileRules {
 		if rule.FileName == "" {
 			return ex.Errorf(nil, "no file name")

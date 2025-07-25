@@ -124,3 +124,4 @@ test/ollama/*/*.tar.gz
 *_REVIEW.md
 *_FIXES.md
 test/ollama/*/README.md
+otel.runtime.go

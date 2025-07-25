@@ -58,11 +58,6 @@ type BuildConfig struct {
 	DisableRules string
 }
 
-// @@This value is specified by the build system.
-// This is the version of the tool, which will be printed when the -version flag
-// is passed.
-var ToolVersion = "1.0.0"
-
 var conf *BuildConfig
 
 func GetConf() *BuildConfig {
@@ -230,15 +225,6 @@ func InitConfig() (err error) {
 	if debugLog != nil {
 		util.SetLogger(debugLog)
 	}
-	return nil
-}
-
-func PrintVersion() error {
-	name, err := util.GetToolName()
-	if err != nil {
-		return ex.Error(err)
-	}
-	fmt.Printf("%s version %s\n", name, ToolVersion)
 	return nil
 }
 
