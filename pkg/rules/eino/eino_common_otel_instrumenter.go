@@ -83,5 +83,6 @@ func BuildEinoCommonInstrumenter() instrumenter.Instrumenter[einoRequest, einoRe
 			Name:    utils.EINO_SCOPE_NAME,
 			Version: version.Tag,
 		}).
+		AddOperationListeners(ai.AIClientMetrics("eino-common")).
 		BuildInstrumenter()
 }

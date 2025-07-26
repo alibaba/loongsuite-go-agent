@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/alibaba/loongsuite-go-agent/pkg/core/meter"
+	"github.com/alibaba/loongsuite-go-agent/pkg/inst-api-semconv/instrumenter/ai"
 	"github.com/alibaba/loongsuite-go-agent/pkg/inst-api-semconv/instrumenter/db"
 	"github.com/alibaba/loongsuite-go-agent/pkg/inst-api-semconv/instrumenter/experimental"
 	"github.com/alibaba/loongsuite-go-agent/pkg/inst-api-semconv/instrumenter/http"
@@ -196,6 +197,8 @@ func initMetrics() error {
 	rpc.InitRpcMetrics(m)
 	// init db metrics
 	db.InitDbMetrics(m)
+	// init ai metrics
+	ai.InitAIMetrics(m)
 	// nacos experimental metrics
 	experimental.InitNacosExperimentalMetrics(m)
 	// DefaultMinimumReadMemStatsInterval is 15 second

@@ -87,7 +87,8 @@ func einoModelCallHandler(config ChatModelConfig) *callbacksutils.ModelCallbackH
 			request := ctx.Value(llmRequestKey{}).(einoLLMRequest)
 			response := einoLLMResponse{}
 			if output.TokenUsage != nil {
-				response.usageOutputTokens = int64(output.TokenUsage.TotalTokens)
+				response.usageOutputTokens = int64(output.TokenUsage.CompletionTokens)
+				request.usageInputTokens = int64(output.TokenUsage.PromptTokens)
 			}
 			if output.Message != nil && output.Message.ResponseMeta != nil {
 				response.responseFinishReasons = []string{output.Message.ResponseMeta.FinishReason}
@@ -141,7 +142,8 @@ func einoModelCallHandler(config ChatModelConfig) *callbacksutils.ModelCallbackH
 					}
 				}
 				if usage != nil {
-					response.usageOutputTokens = int64(usage.TotalTokens)
+					response.usageOutputTokens = int64(usage.CompletionTokens)
+					request.usageInputTokens = int64(usage.PromptTokens)
 				}
 				response.responseModel = request.modelName
 				einoLLMInstrument.End(ctx, request, response, nil)

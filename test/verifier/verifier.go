@@ -120,6 +120,21 @@ func VerifyDbMetricsAttributes(attrs []attribute.KeyValue, dbSystem, operationNa
 	Assert(GetAttribute(attrs, string(semconv.ServerAddressKey)).AsString() == serverAddress, "Expected server.address to be %s, got %s", serverAddress, GetAttribute(attrs, string(semconv.ServerAddressKey)).AsString())
 }
 
+func VerifyGenAIOperationDurationMetricsAttributes(attrs []attribute.KeyValue, operationName, system, requestModel, responseModel string) {
+	Assert(GetAttribute(attrs, string(semconv.GenAIOperationNameKey)).AsString() == operationName, "Expected gen_ai.operation.name to be %s, got %s", operationName, GetAttribute(attrs, string(semconv.GenAIOperationNameKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAISystemKey)).AsString() == system, "Expected gen_ai.system to be %s, got %s", system, GetAttribute(attrs, string(semconv.GenAISystemKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAIRequestModelKey)).AsString() == requestModel, "Expected gen_ai.request.model to be %s, got %s", requestModel, GetAttribute(attrs, string(semconv.GenAIRequestModelKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAIResponseModelKey)).AsString() == responseModel, "Expected gen_ai.response.model to be %s, got %s", responseModel, GetAttribute(attrs, string(semconv.GenAIResponseModelKey)).AsString())
+}
+
+func VerifyGenAITokenUsageMetricsAttributes(attrs []attribute.KeyValue, operationName, system, requestModel, responseModel, tokenType string) {
+	Assert(GetAttribute(attrs, string(semconv.GenAIOperationNameKey)).AsString() == operationName, "Expected gen_ai.operation.name to be %s, got %s", operationName, GetAttribute(attrs, string(semconv.GenAIOperationNameKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAISystemKey)).AsString() == system, "Expected gen_ai.system to be %s, got %s", system, GetAttribute(attrs, string(semconv.GenAISystemKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAIRequestModelKey)).AsString() == requestModel, "Expected gen_ai.request.model to be %s, got %s", requestModel, GetAttribute(attrs, string(semconv.GenAIRequestModelKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAIResponseModelKey)).AsString() == responseModel, "Expected gen_ai.response.model to be %s, got %s", responseModel, GetAttribute(attrs, string(semconv.GenAIResponseModelKey)).AsString())
+	Assert(GetAttribute(attrs, string(semconv.GenAITokenTypeKey)).AsString() == tokenType, "Expected gen_ai.token.type to be %s, got %s", tokenType, GetAttribute(attrs, string(semconv.GenAITokenTypeKey)).AsString())
+}
+
 func VerifyRpcClientMetricsAttributes(attrs []attribute.KeyValue, method, service, system, serverAddr string) {
 	Assert(GetAttribute(attrs, "rpc.method").AsString() == method, "Except rpc.method to be %s, got %s", method, GetAttribute(attrs, "rpc.method").AsString())
 	Assert(GetAttribute(attrs, "rpc.service").AsString() == service, "Except rpc.service to be %s, got %s", service, GetAttribute(attrs, "rpc.service").AsString())

@@ -108,5 +108,6 @@ func BuildEinoLLMInstrumenter() instrumenter.Instrumenter[einoLLMRequest, einoLL
 			Name:    utils.EINO_SCOPE_NAME,
 			Version: version.Tag,
 		}).
+		AddOperationListeners(ai.AIClientMetrics("eino-llm")).
 		BuildInstrumenter()
 }
