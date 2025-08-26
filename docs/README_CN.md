@@ -1,10 +1,9 @@
 ![](images/anim-logo.svg)
 
-[![](https://shields.io/badge/Docs-English-blue?logo=Read%20The%20Docs)](../README.md) &nbsp;
-[![](https://shields.io/badge/Readme-中文-blue?logo=Read%20The%20Docs)](./README_CN.md)  &nbsp;
-[![codecov](https://codecov.io/gh/alibaba/loongsuite-go-agent/branch/main/graph/badge.svg)](https://codecov.io/gh/alibaba/loongsuite-go-agent)  &nbsp;
-[![](https://shields.io/badge/Aliyun-Commercial-orange?logo=alibabacloud)](https://help.aliyun.com/zh/arms/application-monitoring/getting-started/monitoring-the-golang-applications) &nbsp;
-[![](https://img.shields.io/badge/New-Adopter-orange?logo=githubsponsors)](https://github.com/alibaba/loongsuite-go-agent/issues/225) &nbsp;
+[![](https://shields.io/badge/-中文文档-black?logo=dolphin)](./docs/README_CN.md)  &nbsp;
+[![](https://shields.io/badge/-阿里云商业版-black?logo=alibabacloud)](https://help.aliyun.com/zh/arms/application-monitoring/getting-started/monitoring-the-golang-applications) &nbsp;
+[![](https://shields.io/badge/-Loongsuite_Java-black?logo=alibabacloud)](https://github.com/alibaba/loongsuite-java-agent)  &nbsp;
+[![](https://shields.io/badge/-Loongsuite_Python-black?logo=alibabacloud)](https://github.com/alibaba/loongsuite-python-agent)  &nbsp;
 
 **Loongsuite Go Agent** 为希望利用 OpenTelemetry 实现有效可观察性的 Golang 应用程序提供了一个自动解决方案。目标应用程序无需更改代码，插装是在编译时完成的。只需在 `go build` 前添加 `otel` 前缀即可开始 :rocket:
 
@@ -14,7 +13,7 @@
 
 | Linux AMD64 | Linux ARM64 | MacOS AMD64 | MacOS ARM64 | Windows AMD64 |
 | -- | -- | -- | -- | -- |
-| [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-amd64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-arm64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-amd64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-arm64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-windows-amd64.exe) | 
+| [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-amd64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-linux-arm64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-amd64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-darwin-amd64) | [![Download](https://shields.io/badge/-Download-black?logo=winamp)](https://github.com/alibaba/loongsuite-go-agent/releases/latest/download/otel-windows-amd64.exe) | 
 
 **这是推荐的安装方式。**
 
@@ -115,15 +114,9 @@ $ otel go build -gcflags="-m" cmd/app
 
 # 社区
 
-我们期待您的反馈和建议。您可以加入我们的 [钉钉群组](https://qr.dingtalk.com/action/joingroup?code=v1,k1,GyDX5fUTYnJ0En8MrVbHBYTGUcPXJ/NdsmLODGibd0w=&_dt_no_comment=1&origin=11? )
+我们期待您的反馈和建议。您可以加入我们的 [钉钉群组](https://qr.dingtalk.com/action/joingroup?code=v1,k1,PBuICMTDvdh0En8MrVbHBYTGUcPXJ/NdT6JKCZ8CG+w=&_dt_no_comment=1&origin=11)
 与我们交流。
 
 | 钉钉群组 | Star 历史 |
 | :---: | :---: |
 | <img src="images/dingtalk.png" height="200"> | <img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go-agent&type=Date" height="200"> |
-
-我们衷心感谢以下为该项目做出宝贵贡献的贡献者：
-
-<a href="https://github.com/alibaba/loongsuite-go-agent/graphs/contributors">
-  <img alt="contributors" src="https://contrib.rocks/image?repo=alibaba/loongsuite-go-agent" height="150"/>
-</a>

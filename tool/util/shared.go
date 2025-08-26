@@ -70,14 +70,6 @@ func IsCompileCommand(line string) bool {
 			return false
 		}
 	}
-
-	// @@PGO compile command is different from normal compile command, we
-	// should skip it, otherwise the same package will be compiled twice
-	// (one for PGO and one for normal), which finally leads to the same
-	// rule being applied twice.
-	if strings.Contains(line, BuildPgoProfile) {
-		return false
-	}
 	return true
 }
 

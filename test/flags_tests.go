@@ -33,7 +33,7 @@ func TestFlags(t *testing.T) {
 	ExpectStderrContains(t, "Stack:")
 
 	RunSet(t, "-verbose")
-	RunGoBuild(t, "go", "build", `-ldflags=-X main.Placeholder=replaced`)
+	RunGoBuild(t, "go", "build", `-ldflags=-X main.Placeholder=replaced -pgo=default.pgo`)
 	_, stderr := RunApp(t, AppName)
 	ExpectContains(t, stderr, "placeholder:replaced")
 
