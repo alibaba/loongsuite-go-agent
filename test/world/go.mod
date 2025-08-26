@@ -9,6 +9,7 @@ replace github.com/alibaba/loongsuite-go-agent => ../../
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.3.0
 	github.com/alibaba/sentinel-golang v1.0.4
+	github.com/apache/rocketmq-client-go/v2 v2.1.2
 	github.com/cloudwego/eino v0.3.51
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.16
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.1
@@ -18,7 +19,7 @@ require (
 	github.com/cloudwego/hertz v0.9.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-kratos/kratos/v2 v2.7.2
-	github.com/go-redis/redis/v8 v8.11.0
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.12.0
@@ -74,6 +75,7 @@ require (
 	github.com/dubbogo/grpc-go v1.42.10 // indirect
 	github.com/dubbogo/triple v1.2.2-rc4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -91,6 +93,7 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -133,6 +136,7 @@ require (
 	github.com/nyaruka/phonenumbers v1.0.55 // indirect
 	github.com/ollama/ollama v0.5.12 // indirect
 	github.com/openai/openai-go v1.10.1 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
@@ -185,4 +189,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	stathat.com/c/consistent v1.0.0 // indirect
 )
