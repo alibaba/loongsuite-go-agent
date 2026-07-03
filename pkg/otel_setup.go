@@ -241,6 +241,9 @@ func newPeriodicMetricReaders(intervals []time.Duration, newExporter func() (met
 	for _, interval := range intervals {
 		exporter, err := newExporter()
 		if err != nil {
+			for _, r := range readers {
+				_ = r.Shutdown(context.Background())
+			}
 			shutdownMetricExporters(context.Background(), exporters)
 			return nil, nil, err
 		}
