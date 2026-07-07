@@ -53,10 +53,10 @@ const (
 	AttrGenAIResponseTimeToFirstChunk = "gen_ai.response.time_to_first_chunk"
 
 	// GenAI usage attributes
-	AttrGenAIUsageInputTokens            = "gen_ai.usage.input_tokens"
-	AttrGenAIUsageOutputTokens           = "gen_ai.usage.output_tokens"
-	AttrGenAIUsageReasoningOutputTokens  = "gen_ai.usage.reasoning.output_tokens"
-	AttrGenAIUsageCacheReadInputTokens   = "gen_ai.usage.cache_read.input_tokens"
+	AttrGenAIUsageInputTokens              = "gen_ai.usage.input_tokens"
+	AttrGenAIUsageOutputTokens             = "gen_ai.usage.output_tokens"
+	AttrGenAIUsageReasoningOutputTokens    = "gen_ai.usage.reasoning.output_tokens"
+	AttrGenAIUsageCacheReadInputTokens     = "gen_ai.usage.cache_read.input_tokens"
 	AttrGenAIUsageCacheCreationInputTokens = "gen_ai.usage.cache_creation.input_tokens"
 
 	// GenAI conversation attributes
@@ -130,12 +130,20 @@ const (
 type SpanKindValue string
 
 const (
-	SpanKindLLM       SpanKindValue = "llm"
-	SpanKindEmbedding SpanKindValue = "embedding"
-	SpanKindAgent     SpanKindValue = "agent"
-	SpanKindTool      SpanKindValue = "tool"
-	SpanKindRetriever SpanKindValue = "retriever"
-	SpanKindReranker  SpanKindValue = "reranker"
+	SpanKindLLM       SpanKindValue = "LLM"
+	SpanKindEmbedding SpanKindValue = "EMBEDDING"
+	SpanKindAgent     SpanKindValue = "AGENT"
+	SpanKindTool      SpanKindValue = "TOOL"
+	SpanKindRetriever SpanKindValue = "RETRIEVER"
+	SpanKindReranker  SpanKindValue = "RERANKER"
+	// Chain represents a chain/call unit that groups sub-operations.
+	SpanKindChain SpanKindValue = "CHAIN"
+	// Task represents a task invocation.
+	SpanKindTask SpanKindValue = "TASK"
+	// Entry represents an entry-point call marker.
+	SpanKindEntry SpanKindValue = "ENTRY"
+	// Step represents a ReAct round/step marker.
+	SpanKindStep SpanKindValue = "STEP"
 )
 
 // TokenType values for metrics
@@ -158,13 +166,13 @@ const (
 
 // Metric names for GenAI
 const (
-	MetricGenAIClientOperationDuration         = "gen_ai.client.operation.duration"
-	MetricGenAIClientTokenUsage                = "gen_ai.client.token.usage"
-	MetricGenAIClientOperationTimeToFirstChunk = "gen_ai.client.operation.time_to_first_chunk"
+	MetricGenAIClientOperationDuration           = "gen_ai.client.operation.duration"
+	MetricGenAIClientTokenUsage                  = "gen_ai.client.token.usage"
+	MetricGenAIClientOperationTimeToFirstChunk   = "gen_ai.client.operation.time_to_first_chunk"
 	MetricGenAIClientOperationTimePerOutputChunk = "gen_ai.client.operation.time_per_output_chunk"
-	MetricGenAIInvokeAgentDuration             = "gen_ai.invoke_agent.duration"
-	MetricGenAIExecuteToolDuration             = "gen_ai.execute_tool.duration"
-	MetricGenAIWorkflowDuration                = "gen_ai.workflow.duration"
+	MetricGenAIInvokeAgentDuration               = "gen_ai.invoke_agent.duration"
+	MetricGenAIExecuteToolDuration               = "gen_ai.execute_tool.duration"
+	MetricGenAIWorkflowDuration                  = "gen_ai.workflow.duration"
 )
 
 // ============================================================================
