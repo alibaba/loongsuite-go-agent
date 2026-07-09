@@ -1,55 +1,55 @@
-# OpenTelemetry Util for GenAI (Go)
+# OpenTelemetry GenAI 工具库（Go）
 
 [English](./README.md) | [中文](./README_CN.md)
 
-This package provides OpenTelemetry utilities for GenAI instrumentation in Go. It is a port of the Python [opentelemetry-util-genai](https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/util/opentelemetry-util-genai) package.
+本包为 Go 提供了用于 GenAI 埋点的 OpenTelemetry 工具库，是 Python [opentelemetry-util-genai](https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/util/opentelemetry-util-genai) 包的 Go 移植版本。
 
-## Overview
+## 概述
 
-The GenAI Utils package includes boilerplate and helpers to standardize instrumentation for Generative AI. This package provides APIs and types to minimize the work needed to instrument GenAI libraries, while providing standardization for generating both types of OpenTelemetry data: "spans and metrics" and "spans, metrics and events".
+GenAI 工具库封装了用于标准化生成式 AI 埋点的样板代码和辅助函数。本包提供了一组 API 和类型，以尽量减少对 GenAI 库进行埋点所需的工作量，同时为生成两类 OpenTelemetry 数据提供标准化支持：“spans 与 metrics”以及“spans、metrics 与 events”。
 
-## Installation
+## 安装
 
 ```bash
 go get github.com/alibaba/loongsuite-go/util-genai
 ```
 
-## Environment Variables
+## 环境变量
 
-This package relies on environment variables to configure capturing of message content. By default, message content will not be captured.
+本包依赖环境变量来配置是否采集消息内容。默认情况下，不会采集消息内容。
 
-| Variable | Description | Values |
-|----------|-------------|--------|
-| `OTEL_SEMCONV_STABILITY_OPT_IN` | Enable experimental features | `gen_ai_latest_experimental` |
-| `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | Control message content capture | `NO_CONTENT`, `SPAN_ONLY`, `EVENT_ONLY`, `SPAN_AND_EVENT` |
-| `OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT` | Control event emission | `true`, `false` |
+| 变量 | 说明 | 取值 |
+|------|------|------|
+| `OTEL_SEMCONV_STABILITY_OPT_IN` | 启用实验性特性 | `gen_ai_latest_experimental` |
+| `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | 控制消息内容采集 | `NO_CONTENT`、`SPAN_ONLY`、`EVENT_ONLY`、`SPAN_AND_EVENT` |
+| `OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT` | 控制事件发送 | `true`、`false` |
 
-## Span Attributes
+## Span 属性
 
-This package provides these span attributes following the [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md):
+本包按照 [OpenTelemetry GenAI 语义约定](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md) 提供以下 span 属性：
 
-- `gen_ai.provider.name`: Provider name (e.g., "openai")
-- `gen_ai.operation.name`: Operation name (e.g., "chat")
-- `gen_ai.request.model`: Request model name
-- `gen_ai.response.finish_reasons`: List of finish reasons
-- `gen_ai.response.model`: Response model name
-- `gen_ai.response.id`: Response ID
-- `gen_ai.usage.input_tokens`: Input token count
-- `gen_ai.usage.output_tokens`: Output token count
-- `gen_ai.input.messages`: Input messages (when content capturing is enabled)
-- `gen_ai.output.messages`: Output messages (when content capturing is enabled)
-- `gen_ai.system_instructions`: System instructions (when provided)
+- `gen_ai.provider.name`：提供方名称（例如 "openai"）
+- `gen_ai.operation.name`：操作名称（例如 "chat"）
+- `gen_ai.request.model`：请求的模型名称
+- `gen_ai.response.finish_reasons`：结束原因列表
+- `gen_ai.response.model`：响应的模型名称
+- `gen_ai.response.id`：响应 ID
+- `gen_ai.usage.input_tokens`：输入 token 数量
+- `gen_ai.usage.output_tokens`：输出 token 数量
+- `gen_ai.input.messages`：输入消息（在启用内容采集时）
+- `gen_ai.output.messages`：输出消息（在启用内容采集时）
+- `gen_ai.system_instructions`：系统指令（在提供时）
 
-## Usage
+## 使用方式
 
-### Basic LLM Invocation
+### 基础 LLM 调用
 
 ```go
 package main
 
 import (
     "context"
-    
+
     utilgenai "github.com/alibaba/loongsuite-go/util-genai"
 )
 
@@ -57,7 +57,7 @@ func main() {
     handler := utilgenai.GetTelemetryHandler()
     ctx := context.Background()
 
-    // Create an invocation object with your request data
+    // 使用请求数据创建一个调用对象
     invocation := utilgenai.NewLLMInvocation("gpt-4")
     invocation.Provider = "openai"
     invocation.InputMessages = []utilgenai.InputMessage{
@@ -69,13 +69,13 @@ func main() {
         },
     }
 
-    // Start the invocation (opens a span)
+    // 开始调用（打开一个 span）
     ctx = handler.StartLLM(ctx, invocation)
 
-    // Make the actual LLM call
+    // 执行真正的 LLM 调用
     // response, err := client.Chat(ctx, request)
 
-    // Populate outputs
+    // 填充输出
     invocation.OutputMessages = []utilgenai.OutputMessage{
         {
             Role: "assistant",
@@ -90,12 +90,12 @@ func main() {
     invocation.InputTokens = &inputTokens
     invocation.OutputTokens = &outputTokens
 
-    // Stop the invocation (closes the span)
+    // 结束调用（关闭 span）
     handler.StopLLM(invocation)
 }
 ```
 
-### Handling Errors
+### 错误处理
 
 ```go
 func callLLM(ctx context.Context) error {
@@ -115,21 +115,16 @@ func callLLM(ctx context.Context) error {
         return err
     }
 
-    // Populate outputs and stop
+    // 填充输出并结束
     // ...
     handler.StopLLM(invocation)
     return nil
 }
 ```
 
-### Streaming Mode
+### 流式（Stream）模式
 
-For streaming LLM responses, set `invocation.Stream = true` to mark the request
-as streaming (`gen_ai.request.stream`), and record the time to receive the first
-chunk in `invocation.TimeToFirstChunk` (`gen_ai.response.time_to_first_chunk`).
-Start the span *before* the network call so latency is measured accurately, drain
-the stream while accumulating the output, then call `StopLLM` once the stream is
-fully consumed.
+对于流式 LLM 响应，将 `invocation.Stream` 设置为 `true`，以标记该请求为流式请求（`gen_ai.request.stream`），并将接收到首个 chunk 的耗时记录到 `invocation.TimeToFirstChunk`（`gen_ai.response.time_to_first_chunk`）。请在发起网络调用**之前**开启 span，以便准确测量时延；随后在读取流的过程中持续累积输出，待整个流读取完毕后再调用 `StopLLM`。
 
 ```go
 handler := utilgenai.GetTelemetryHandler()
@@ -145,7 +140,7 @@ invocation.InputMessages = []utilgenai.InputMessage{
     },
 }
 
-// Open the span before the network call so latency is captured accurately.
+// 在发起网络调用之前开启 span，以准确捕获时延。
 ctx = handler.StartLLM(ctx, invocation)
 
 stream, err := client.CreateChatCompletionStream(ctx, request)
@@ -171,14 +166,14 @@ for {
         return recvErr
     }
 
-    // Record time-to-first-chunk once, on the first chunk received.
+    // 仅在收到首个 chunk 时记录一次 time-to-first-chunk。
     if firstChunk {
         ttfc := time.Since(streamStart).Seconds()
         invocation.TimeToFirstChunk = &ttfc
         firstChunk = false
     }
 
-    // The usage-only final chunk carries token counts (StreamOptions.IncludeUsage).
+    // 仅包含 usage 的最后一个 chunk 携带 token 计数（StreamOptions.IncludeUsage）。
     if resp.Usage != nil {
         inTok := resp.Usage.PromptTokens
         outTok := resp.Usage.CompletionTokens
@@ -190,7 +185,7 @@ for {
     }
 }
 
-// Populate the aggregated response and close the span successfully.
+// 填充聚合后的响应并成功关闭 span。
 invocation.OutputMessages = []utilgenai.OutputMessage{
     {
         Role:         "assistant",
@@ -201,16 +196,15 @@ invocation.OutputMessages = []utilgenai.OutputMessage{
 handler.StopLLM(invocation)
 ```
 
-When streaming is enabled, this package emits the following additional telemetry:
+启用流式模式后，本包会额外产生以下遥测数据：
 
-- Span attribute `gen_ai.request.stream`: `true`
-- Span attribute `gen_ai.response.time_to_first_chunk`: seconds until the first chunk
-- Metric `gen_ai.client.operation.time_to_first_chunk`: time-to-first-chunk histogram
+- Span 属性 `gen_ai.request.stream`：`true`
+- Span 属性 `gen_ai.response.time_to_first_chunk`：接收到首个 chunk 的耗时（秒）
+- Metric `gen_ai.client.operation.time_to_first_chunk`：time-to-first-chunk 直方图
 
-A complete runnable example is available under
-[`example/genai-stream`](../example/genai-stream).
+完整的可运行示例见 [`example/genai-stream`](../example/genai-stream)。
 
-### Embedding Invocation
+### Embedding 调用
 
 ```go
 handler := utilgenai.GetTelemetryHandler()
@@ -222,7 +216,7 @@ invocation.InputCount = &inputCount
 
 ctx = handler.StartEmbedding(ctx, invocation)
 
-// Make the embedding call
+// 执行 embedding 调用
 // ...
 
 inputTokens := 100
@@ -230,7 +224,7 @@ invocation.InputTokens = &inputTokens
 handler.StopEmbedding(invocation)
 ```
 
-### Tool Execution
+### 工具执行
 
 ```go
 handler := utilgenai.GetTelemetryHandler()
@@ -241,14 +235,14 @@ invocation.Input = map[string]any{"location": "San Francisco"}
 
 ctx = handler.StartExecuteTool(ctx, invocation)
 
-// Execute the tool
+// 执行工具
 result := getWeather("San Francisco")
 invocation.Output = result
 
 handler.StopExecuteTool(invocation)
 ```
 
-### Agent Invocation
+### Agent 调用
 
 ```go
 handler := utilgenai.GetTelemetryHandler()
@@ -259,13 +253,13 @@ invocation.Provider = "openai"
 
 ctx = handler.StartInvokeAgent(ctx, invocation)
 
-// Run the agent
+// 运行 agent
 // ...
 
 handler.StopInvokeAgent(invocation)
 ```
 
-### Custom Provider Configuration
+### 自定义 Provider 配置
 
 ```go
 import (
@@ -273,42 +267,43 @@ import (
     "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Create custom tracer provider
+// 创建自定义 tracer provider
 tp := trace.NewTracerProvider(...)
 otel.SetTracerProvider(tp)
 
-// Create handler with custom providers
+// 使用自定义 provider 创建 handler
 handler := utilgenai.NewTelemetryHandler(
     utilgenai.WithTracerProvider(tp),
     utilgenai.WithMeterProvider(mp),
 )
 ```
 
-## Supported Operations
+## 支持的操作
 
-| Operation | Handler Methods |
-|-----------|-----------------|
-| LLM/Chat | `StartLLM`, `StopLLM`, `FailLLM` |
-| Embeddings | `StartEmbedding`, `StopEmbedding`, `FailEmbedding` |
-| Tool Execution | `StartExecuteTool`, `StopExecuteTool`, `FailExecuteTool` |
-| Agent Invocation | `StartInvokeAgent`, `StopInvokeAgent`, `FailInvokeAgent` |
-| Agent Creation | `StartCreateAgent`, `StopCreateAgent`, `FailCreateAgent` |
-| Document Retrieval | `StartRetrieve`, `StopRetrieve`, `FailRetrieve` |
-| Document Reranking | `StartRerank`, `StopRerank`, `FailRerank` |
+| 操作 | Handler 方法 |
+|------|-------------|
+| LLM/Chat | `StartLLM`、`StopLLM`、`FailLLM` |
+| Embeddings | `StartEmbedding`、`StopEmbedding`、`FailEmbedding` |
+| 工具执行 | `StartExecuteTool`、`StopExecuteTool`、`FailExecuteTool` |
+| Agent 调用 | `StartInvokeAgent`、`StopInvokeAgent`、`FailInvokeAgent` |
+| Agent 创建 | `StartCreateAgent`、`StopCreateAgent`、`FailCreateAgent` |
+| 文档检索 | `StartRetrieve`、`StopRetrieve`、`FailRetrieve` |
+| 文档重排 | `StartRerank`、`StopRerank`、`FailRerank` |
 
 ## Metrics
 
-This package automatically records the following metrics:
+本包会自动记录以下指标：
 
-- `gen_ai.client.operation.duration`: Duration of GenAI client operations (histogram)
-- `gen_ai.client.token.usage`: Token usage for input and output (histogram)
+- `gen_ai.client.operation.duration`：GenAI 客户端操作的耗时（直方图）
+- `gen_ai.client.token.usage`：输入和输出的 token 使用量（直方图）
+- `gen_ai.client.operation.time_to_first_chunk`：流式响应中接收到首个 chunk 的耗时（直方图）
 
-## References
+## 参考资料
 
-- [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md)
+- [OpenTelemetry GenAI 语义约定](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md)
 - [Python opentelemetry-util-genai](https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/util/opentelemetry-util-genai)
 - [OpenTelemetry Go](https://opentelemetry.io/docs/languages/go/)
 
-## License
+## 许可证
 
 Apache License 2.0
