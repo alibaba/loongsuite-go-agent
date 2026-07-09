@@ -1,5 +1,7 @@
 # GenAI Streaming Instrumentation Demo
 
+[English](./README.md) | [中文](./README_CN.md)
+
 A focused, standalone demo showing how to instrument a **streaming** OpenAI chat
 completion with the `util-genai` module. Unlike the general `example/genai` demo,
 this one concentrates on the streaming path and the streaming-specific telemetry.

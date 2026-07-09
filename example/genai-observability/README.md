@@ -1,5 +1,7 @@
 # GenAI Events & Content Upload Demo
 
+[English](./README.md) | [中文](./README_CN.md)
+
 This demo shows two `util-genai` capabilities that require **no external API key**:
 
 1. **Log-based event emission** — a `gen_ai.client.inference.operation.details`

@@ -1,5 +1,7 @@
 # GenAI Instrumentation Demo
 
+[English](./README.md) | [中文](./README_CN.md)
+
 This demo shows how to use the `util-genai` module to instrument OpenAI API calls with OpenTelemetry. It demonstrates real-world usage patterns for adding observability to GenAI applications.
 
 ## What This Demo Covers
