@@ -303,6 +303,13 @@ This package automatically records the following metrics:
 - `gen_ai.client.operation.duration`: Duration of GenAI client operations (histogram)
 - `gen_ai.client.token.usage`: Token usage for input and output (histogram)
 
+## Examples
+
+Complete runnable examples are available:
+
+- [`example/genai`](../example/genai): a comprehensive demo covering chat completion, streaming chat completion, and embedding instrumentation.
+- [`example/genai-stream`](../example/genai-stream): a streaming-focused demo highlighting streaming-specific telemetry (`gen_ai.request.stream`, `gen_ai.response.time_to_first_chunk`), exporting both spans and metrics to stdout.
+
 ## References
 
 - [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md)

@@ -298,6 +298,13 @@ handler := utilgenai.NewTelemetryHandler(
 - `gen_ai.client.token.usage`：输入和输出的 token 使用量（直方图）
 - `gen_ai.client.operation.time_to_first_chunk`：流式响应中接收到首个 chunk 的耗时（直方图）
 
+## 示例
+
+以下是可直接运行的完整示例：
+
+- [`example/genai`](../example/genai)：综合示例，演示 chat completion、流式 chat completion 以及 embedding 的埋点方式。
+- [`example/genai-stream`](../example/genai-stream)：流式专项示例，聚焦流式相关遥测（`gen_ai.request.stream`、`gen_ai.response.time_to_first_chunk`），并将 spans 和 metrics 导出到 stdout。
+
 ## 参考资料
 
 - [OpenTelemetry GenAI 语义约定](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/README.md)
