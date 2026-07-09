@@ -23,6 +23,7 @@ import (
 	"github.com/alibaba/loongsuite-go/tool/ex"
 	"github.com/alibaba/loongsuite-go/tool/rules"
 	"github.com/alibaba/loongsuite-go/tool/util"
+	"golang.org/x/mod/semver"
 )
 
 type Dependency struct {
@@ -90,6 +91,113 @@ func (dp *DepProcessor) addDependency(gomod string, dependencies []Dependency) e
 	return nil
 }
 
+func (dp *DepProcessor) originalGoModPath(gomod string) string {
+	if backup, ok := dp.backups[gomod]; ok && backup != "" {
+		return backup
+	}
+	return gomod
+}
+
+func canPinHookDependency(userVersion, hookVersion string) bool {
+	if !semver.IsValid(userVersion) || !semver.IsValid(hookVersion) {
+		return false
+	}
+	userMajor := semver.Major(userVersion)
+	hookMajor := semver.Major(hookVersion)
+	if userMajor == "v0" || hookMajor == "v0" {
+		return false
+	}
+	if userMajor != hookMajor {
+		return false
+	}
+	return true
+}
+
+type hookDependencyPin struct {
+	path    string
+	version string
+}
+
+func (dp *DepProcessor) pinConflictingHookDependencies(gomod string, dependencies []Dependency) error {
+	userModfile, err := parseGoMod(dp.originalGoModPath(gomod))
+	if err != nil {
+		return err
+	}
+	userVersions := make(map[string]string)
+	for _, req := range userModfile.Require {
+		if req.Indirect {
+			continue
+		}
+		if req.Mod.Path != "" && req.Mod.Version != "" {
+			userVersions[req.Mod.Path] = req.Mod.Version
+		}
+	}
+	if len(userVersions) == 0 {
+		return nil
+	}
+
+	existingReplaces := make(map[string]bool)
+	for _, replace := range userModfile.Replace {
+		existingReplaces[replace.Old.Path] = true
+	}
+
+	for _, dependency := range dependencies {
+		if !dependency.Replace || dependency.ReplacePath == "" {
+			continue
+		}
+		hookGoMod := filepath.Join(dependency.ReplacePath, util.GoModFile)
+		if util.PathNotExists(hookGoMod) {
+			continue
+		}
+		hookModfile, err := parseGoMod(hookGoMod)
+		if err != nil {
+			return err
+		}
+		changed := false
+		pins := make([]hookDependencyPin, 0)
+		for _, req := range hookModfile.Require {
+			path := req.Mod.Path
+			if req.Indirect {
+				continue
+			}
+			userVersion, ok := userVersions[path]
+			if !ok || userVersion == "" || userVersion == req.Mod.Version {
+				continue
+			}
+			if !canPinHookDependency(userVersion, req.Mod.Version) {
+				continue
+			}
+			if existingReplaces[path] {
+				continue
+			}
+			pins = append(pins, hookDependencyPin{
+				path:    path,
+				version: userVersion,
+			})
+		}
+		for _, pin := range pins {
+			err = hookModfile.DropRequire(pin.path)
+			if err != nil {
+				return ex.Wrap(err)
+			}
+			err = hookModfile.AddRequire(pin.path, pin.version)
+			if err != nil {
+				return ex.Wrap(err)
+			}
+			changed = true
+			util.Log("Pin hook dependency %s to user version %s", pin.path, pin.version)
+		}
+
+		if changed {
+			err = writeGoMod(hookGoMod, hookModfile)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (dp *DepProcessor) findRuleDir(path string) (string, string, error) {
 	// The rule can be either a standard rule or a custom rule
 	// We should identify it and define how to find it
@@ -124,9 +232,9 @@ func (dp *DepProcessor) newDeps(bundles []*rules.InstRuleSet) error {
 		"log": "_otel_log",
 		// otel setup
 		"github.com/alibaba/loongsuite-go/pkg": ast.IdentIgnore,
-		"go.opentelemetry.io/otel":                   ast.IdentIgnore,
-		"go.opentelemetry.io/otel/sdk/trace":         ast.IdentIgnore,
-		"go.opentelemetry.io/otel/baggage":           ast.IdentIgnore,
+		"go.opentelemetry.io/otel":             ast.IdentIgnore,
+		"go.opentelemetry.io/otel/sdk/trace":   ast.IdentIgnore,
+		"go.opentelemetry.io/otel/baggage":     ast.IdentIgnore,
 	}
 	for pkg, alias := range builtin {
 		content += fmt.Sprintf("import %s %q\n", alias, pkg)
@@ -195,6 +303,10 @@ func (dp *DepProcessor) newDeps(bundles []*rules.InstRuleSet) error {
 	}
 
 	err = dp.addDependency(dp.getGoModPath(), addDeps)
+	if err != nil {
+		return err
+	}
+	err = dp.pinConflictingHookDependencies(dp.getGoModPath(), addDeps)
 	if err != nil {
 		return err
 	}
