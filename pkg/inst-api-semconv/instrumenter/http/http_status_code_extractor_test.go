@@ -15,6 +15,7 @@
 package http
 
 import (
+	"errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -103,8 +104,8 @@ func TestHttpClientSpanStatusExtractor400(t *testing.T) {
 	if *span.status != codes.Error {
 		panic("span status should be error!")
 	}
-	if span.Kvs == nil {
-		panic("kv should not be nil")
+	if span.Kvs != nil {
+		panic("kv should be nil for 400 status code")
 	}
 }
 
@@ -119,6 +120,20 @@ func TestHttpClientSpanStatusExtractor200(t *testing.T) {
 	c.Extract(span, nil, nil, nil)
 	if *span.status != codes.Ok {
 		panic("span status should be ok!")
+	}
+}
+
+func TestHttpClientSpanStatusExtractorTransportError(t *testing.T) {
+	c := HttpClientSpanStatusExtractor[any, any]{
+		Getter: customizedNetHttpAttrsGetter{
+			code: 200,
+		},
+	}
+	u := codes.Error
+	span := &testSpan{status: &u}
+	c.Extract(span, nil, nil, errors.New("connection refused"))
+	if *span.status != codes.Error {
+		panic("span status should remain error when err != nil")
 	}
 }
 func TestHttpClientSpanStatusExtractor201(t *testing.T) {
@@ -146,8 +161,8 @@ func TestHttpServerSpanStatusExtractor500(t *testing.T) {
 	if *span.status != codes.Error {
 		panic("span status should be error!")
 	}
-	if span.Kvs == nil {
-		panic("kv should not be nil")
+	if span.Kvs != nil {
+		panic("kv should be nil for 500 status code")
 	}
 }
 

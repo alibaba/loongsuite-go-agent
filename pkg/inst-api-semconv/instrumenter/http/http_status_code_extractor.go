@@ -15,29 +15,21 @@
 package http
 
 import (
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
-	"strconv"
 )
-
-const invalidHttpStatusCode = "INVALID_HTTP_STATUS_CODE"
 
 type HttpClientSpanStatusExtractor[REQUEST any, RESPONSE any] struct {
 	Getter HttpCommonAttrsGetter[REQUEST, RESPONSE]
 }
 
 func (h HttpClientSpanStatusExtractor[REQUEST, RESPONSE]) Extract(span trace.Span, request REQUEST, response RESPONSE, err error) {
+	if err != nil {
+		return
+	}
 	statusCode := h.Getter.GetHttpResponseStatusCode(request, response, err)
 	if statusCode >= 400 || statusCode < 100 {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-		} else {
-			span.SetStatus(codes.Error, invalidHttpStatusCode)
-		}
-		span.SetAttributes(attribute.KeyValue{Key: semconv.ErrorTypeKey, Value: attribute.StringValue(strconv.Itoa(statusCode))})
+		span.SetStatus(codes.Error, "")
 	} else if statusCode >= 200 && statusCode < 300 {
 		span.SetStatus(codes.Ok, "success")
 	}
@@ -54,9 +46,8 @@ func (h HttpServerSpanStatusExtractor[REQUEST, RESPONSE]) Extract(span trace.Spa
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		} else {
-			span.SetStatus(codes.Error, invalidHttpStatusCode)
+			span.SetStatus(codes.Error, "")
 		}
-		span.SetAttributes(attribute.KeyValue{Key: semconv.ErrorTypeKey, Value: attribute.StringValue(strconv.Itoa(statusCode))})
 	} else if statusCode >= 200 && statusCode < 300 {
 		span.SetStatus(codes.Ok, "success")
 	}

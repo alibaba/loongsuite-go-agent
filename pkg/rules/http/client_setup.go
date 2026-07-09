@@ -61,8 +61,9 @@ func clientOnEnter(call api.CallContext, t *http.Transport, req *http.Request) {
 	ctx := netHttpClientInstrumenter.Start(req.Context(), netHttpRequest)
 	req = req.WithContext(ctx)
 	call.SetParam(1, req)
-	data := make(map[string]interface{}, 1)
+	data := make(map[string]interface{}, 2)
 	data["ctx"] = ctx
+	data["request"] = netHttpRequest
 	call.SetData(data)
 	return
 }
@@ -86,12 +87,12 @@ func clientOnExit(call api.CallContext, res *http.Response, err error) {
 			host:    res.Request.Host,
 			isTls:   res.Request.TLS != nil,
 		}, &netHttpResponse{
-			statusCode: res.StatusCode,
-			header:     res.Header,
+			statusCode:  res.StatusCode,
+			header:      res.Header,
+			hasResponse: true,
 		}, err)
 	} else {
-		netHttpClientInstrumenter.End(ctx, &netHttpRequest{}, &netHttpResponse{
-			statusCode: 500,
-		}, err)
+		request := data["request"].(*netHttpRequest)
+		netHttpClientInstrumenter.End(ctx, request, &netHttpResponse{}, err)
 	}
 }

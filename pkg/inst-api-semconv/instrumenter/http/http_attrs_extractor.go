@@ -22,6 +22,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
+	"strconv"
 	"strings"
 )
 
@@ -67,6 +68,10 @@ type HttpClientAttrsExtractor[REQUEST any, RESPONSE any, GETTER1 HttpClientAttrs
 	NetworkExtractor net.NetworkAttrsExtractor[REQUEST, RESPONSE, GETTER2]
 }
 
+type httpClientResponseResolver[REQUEST any, RESPONSE any] interface {
+	HasHttpResponse(request REQUEST, response RESPONSE, err error) bool
+}
+
 func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnStart(attributes []attribute.KeyValue, parentContext context.Context, request REQUEST) ([]attribute.KeyValue, context.Context) {
 	attributes, parentContext = h.Base.OnStart(attributes, parentContext, request)
 	attributes, parentContext = h.NetworkExtractor.OnStart(attributes, parentContext, request)
@@ -89,7 +94,37 @@ func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnStart(
 }
 
 func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnEnd(attributes []attribute.KeyValue, context context.Context, request REQUEST, response RESPONSE, err error) ([]attribute.KeyValue, context.Context) {
-	attributes, context = h.Base.OnEnd(attributes, context, request, response, err)
+	getter := h.Base.HttpGetter
+	hasResponse := err == nil
+	if resolver, ok := any(getter).(httpClientResponseResolver[REQUEST, RESPONSE]); ok {
+		hasResponse = resolver.HasHttpResponse(request, response, err)
+	}
+	protocolName := h.Base.NetGetter.GetNetworkProtocolName(request, response)
+	protocolVersion := h.Base.NetGetter.GetNetworkProtocolVersion(request, response)
+	attributes = append(attributes, attribute.KeyValue{
+		Key:   semconv.NetworkProtocolNameKey,
+		Value: attribute.StringValue(protocolName),
+	}, attribute.KeyValue{
+		Key:   semconv.NetworkProtocolVersionKey,
+		Value: attribute.StringValue(protocolVersion),
+	})
+	if hasResponse {
+		statusCode := getter.GetHttpResponseStatusCode(request, response, err)
+		attributes = append(attributes, attribute.KeyValue{
+			Key:   semconv.HTTPResponseStatusCodeKey,
+			Value: attribute.IntValue(statusCode),
+		})
+	}
+	errorType := getter.GetErrorType(request, response, err)
+	if errorType == "" && err != nil && !hasResponse {
+		errorType = NormalizeHTTPClientErrorType(err)
+	}
+	if errorType != "" {
+		attributes = append(attributes, attribute.KeyValue{
+			Key:   semconv.ErrorTypeKey,
+			Value: attribute.StringValue(errorType),
+		})
+	}
 	attributes, context = h.NetworkExtractor.OnEnd(attributes, context, request, response, err)
 	if h.Base.AttributesFilter != nil {
 		attributes = h.Base.AttributesFilter(attributes)
@@ -131,6 +166,24 @@ func (h *HttpServerAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2, GETTER3])
 	attributes, context = h.Base.OnEnd(attributes, context, request, response, err)
 	attributes, context = h.UrlExtractor.OnEnd(attributes, context, request, response, err)
 	attributes, context = h.NetworkExtractor.OnEnd(attributes, context, request, response, err)
+
+	statusCode := h.Base.HttpGetter.GetHttpResponseStatusCode(request, response, err)
+	if statusCode >= 500 || statusCode < 100 {
+		hasErrorType := false
+		for _, attr := range attributes {
+			if attr.Key == semconv.ErrorTypeKey {
+				hasErrorType = true
+				break
+			}
+		}
+		if !hasErrorType {
+			attributes = append(attributes, attribute.KeyValue{
+				Key:   semconv.ErrorTypeKey,
+				Value: attribute.StringValue(strconv.Itoa(statusCode)),
+			})
+		}
+	}
+
 	span := trace.SpanFromContext(context)
 	localRootSpan, ok := span.(sdktrace.ReadOnlySpan)
 	if ok && span.IsRecording() {

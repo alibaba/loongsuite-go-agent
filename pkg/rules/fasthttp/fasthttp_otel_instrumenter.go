@@ -56,6 +56,11 @@ func (n fastHttpClientAttrsGetter) GetHttpRequestHeader(request fastHttpRequest,
 func (n fastHttpClientAttrsGetter) GetHttpResponseStatusCode(request fastHttpRequest, response fastHttpResponse, err error) int {
 	return response.statusCode
 }
+
+func (n fastHttpClientAttrsGetter) HasHttpResponse(request fastHttpRequest, response fastHttpResponse, err error) bool {
+	return err == nil
+}
+
 func (n fastHttpClientAttrsGetter) GetHttpResponseHeader(request fastHttpRequest, response fastHttpResponse, name string) []string {
 	all := make([]string, 0)
 	for _, header := range response.header.PeekAll(name) {

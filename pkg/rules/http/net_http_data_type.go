@@ -30,8 +30,9 @@ type netHttpRequest struct {
 }
 
 type netHttpResponse struct {
-	statusCode int
-	header     http.Header
+	statusCode  int
+	header      http.Header
+	hasResponse bool
 }
 
 func getProtocolVersion(majorVersion, minorVersion int) string {

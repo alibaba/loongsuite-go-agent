@@ -56,6 +56,10 @@ func (n netHttpClientAttrsGetter) GetHttpResponseStatusCode(request *netHttpRequ
 	return response.statusCode
 }
 
+func (n netHttpClientAttrsGetter) HasHttpResponse(request *netHttpRequest, response *netHttpResponse, err error) bool {
+	return response != nil && response.hasResponse
+}
+
 func (n netHttpClientAttrsGetter) GetHttpResponseHeader(request *netHttpRequest, response *netHttpResponse, name string) []string {
 	return response.header.Values(name)
 }
