@@ -28,7 +28,7 @@ executed under its own span, and the result is fed back for a final answer.
 ```bash
 export OPENAI_API_KEY="sk-your-api-key-here"
 
-cd example/genai-tool
+cd example/genai-demo/genai-tool
 go mod tidy
 go run main.go
 ```
@@ -47,7 +47,7 @@ carries the tool name, call id, and input/output.
 ## Project Structure
 
 ```
-example/genai-tool/
+example/genai-demo/genai-tool/
 ├── go.mod      # Module definition with local replace directive
 ├── main.go     # Function-calling demo application
 └── README.md   # This file

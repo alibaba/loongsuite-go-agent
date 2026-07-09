@@ -1,4 +1,4 @@
-module github.com/alibaba/loongsuite-go/example/genai-observability
+module github.com/alibaba/loongsuite-go/example/genai-demo/genai-observability
 
 go 1.24.0
 
@@ -23,4 +23,4 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 )
 
-replace github.com/alibaba/loongsuite-go/util-genai => ../../util-genai
+replace github.com/alibaba/loongsuite-go/util-genai => ../../../util-genai

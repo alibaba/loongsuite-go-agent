@@ -19,7 +19,7 @@ The demo fabricates an LLM invocation (no real model call), so it runs offline.
 ## How to Run
 
 ```bash
-cd example/genai-observability
+cd example/genai-demo/genai-observability
 go mod tidy
 go run .
 ```
@@ -46,7 +46,7 @@ It then:
 ## Project Structure
 
 ```
-example/genai-observability/
+example/genai-demo/genai-observability/
 ├── go.mod      # Module definition with local replace directive
 ├── main.go     # Demo application
 └── README.md   # This file

@@ -18,7 +18,7 @@
 ## 运行方式
 
 ```bash
-cd example/genai-observability
+cd example/genai-demo/genai-observability
 go mod tidy
 go run .
 ```
@@ -45,7 +45,7 @@ go run .
 ## 项目结构
 
 ```
-example/genai-observability/
+example/genai-demo/genai-observability/
 ├── go.mod      # 模块定义，包含本地 replace 指令
 ├── main.go     # 示例应用
 └── README.md   # 英文说明

@@ -24,7 +24,7 @@ All telemetry (spans) is exported to stdout as JSON for easy inspection.
 export OPENAI_API_KEY="sk-your-api-key-here"
 
 # Navigate to this directory
-cd example/genai
+cd example/genai-demo/genai
 
 # Download dependencies
 go mod tidy
@@ -65,7 +65,7 @@ Example span output (abbreviated):
 ## Project Structure
 
 ```
-example/genai/
+example/genai-demo/genai/
 ├── go.mod      # Module definition with local replace directive
 ├── main.go     # Demo application
 └── README.md   # This file

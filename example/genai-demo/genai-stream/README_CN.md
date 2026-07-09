@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README_CN.md)
 
-一个专注、独立的示例，演示如何使用 `util-genai` 模块对**流式**的 OpenAI 对话补全进行埋点。与通用的 `example/genai` 示例不同，本示例聚焦于流式路径以及流式特有的遥测数据。
+一个专注、独立的示例，演示如何使用 `util-genai` 模块对**流式**的 OpenAI 对话补全进行埋点。与通用的 `example/genai-demo/genai` 示例不同，本示例聚焦于流式路径以及流式特有的遥测数据。
 
 ## 本示例涵盖的内容
 
@@ -22,7 +22,7 @@
 ```bash
 export OPENAI_API_KEY="sk-your-api-key-here"
 
-cd example/genai-stream
+cd example/genai-demo/genai-stream
 go mod tidy
 go run main.go
 ```
@@ -49,7 +49,7 @@ go run main.go
 ## 项目结构
 
 ```
-example/genai-stream/
+example/genai-demo/genai-stream/
 ├── go.mod      # 模块定义，包含本地 replace 指令
 ├── main.go     # 流式示例应用
 └── README.md   # 英文说明

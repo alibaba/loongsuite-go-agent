@@ -24,7 +24,7 @@
 ```bash
 export OPENAI_API_KEY="sk-your-api-key-here"
 
-cd example/genai-tool
+cd example/genai-demo/genai-tool
 go mod tidy
 go run main.go
 ```
@@ -43,7 +43,7 @@ go run main.go
 ## 项目结构
 
 ```
-example/genai-tool/
+example/genai-demo/genai-tool/
 ├── go.mod      # 模块定义，包含本地 replace 指令
 ├── main.go     # Function calling 示例应用
 └── README.md   # 英文说明

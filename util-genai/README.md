@@ -211,7 +211,7 @@ When streaming is enabled, this package emits the following additional telemetry
 - Metric `gen_ai.client.operation.time_to_first_chunk`: time-to-first-chunk histogram
 
 A complete runnable example is available under
-[`example/genai-stream`](../example/genai-stream).
+[`example/genai-demo/genai-stream`](../example/genai-demo/genai-stream).
 
 ### Embedding Invocation
 
@@ -336,7 +336,7 @@ defer handler.Shutdown(context.Background())
 ```
 
 A complete runnable example (no API key required) is available under
-[`example/genai-observability`](../example/genai-observability).
+[`example/genai-demo/genai-observability`](../example/genai-demo/genai-observability).
 
 ## Supported Operations
 

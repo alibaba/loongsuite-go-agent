@@ -24,7 +24,7 @@
 export OPENAI_API_KEY="sk-your-api-key-here"
 
 # 进入本目录
-cd example/genai
+cd example/genai-demo/genai
 
 # 下载依赖
 go mod tidy
@@ -65,7 +65,7 @@ Span 输出示例（已简化）：
 ## 项目结构
 
 ```
-example/genai/
+example/genai-demo/genai/
 ├── go.mod      # 模块定义，包含本地 replace 指令
 ├── main.go     # 示例应用
 └── README.md   # 英文说明

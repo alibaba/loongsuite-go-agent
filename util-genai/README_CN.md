@@ -205,7 +205,7 @@ handler.StopLLM(invocation)
 - Span 属性 `gen_ai.response.time_to_first_chunk`：接收到首个 chunk 的耗时（秒）
 - Metric `gen_ai.client.operation.time_to_first_chunk`：time-to-first-chunk 直方图
 
-完整的可运行示例见 [`example/genai-stream`](../example/genai-stream)。
+完整的可运行示例见 [`example/genai-demo/genai-stream`](../example/genai-demo/genai-stream)。
 
 ### Embedding 调用
 
@@ -326,7 +326,7 @@ defer handler.Shutdown(context.Background())
 ```
 
 完整的可运行示例（无需 API key）见
-[`example/genai-observability`](../example/genai-observability)。
+[`example/genai-demo/genai-observability`](../example/genai-demo/genai-observability)。
 
 ## 支持的操作
 

@@ -3,7 +3,7 @@
 [English](./README.md) | [中文](./README_CN.md)
 
 A focused, standalone demo showing how to instrument a **streaming** OpenAI chat
-completion with the `util-genai` module. Unlike the general `example/genai` demo,
+completion with the `util-genai` module. Unlike the general `example/genai-demo/genai` demo,
 this one concentrates on the streaming path and the streaming-specific telemetry.
 
 ## What This Demo Covers
@@ -25,7 +25,7 @@ this one concentrates on the streaming path and the streaming-specific telemetry
 ```bash
 export OPENAI_API_KEY="sk-your-api-key-here"
 
-cd example/genai-stream
+cd example/genai-demo/genai-stream
 go mod tidy
 go run main.go
 ```
@@ -54,7 +54,7 @@ The span includes streaming attributes such as:
 ## Project Structure
 
 ```
-example/genai-stream/
+example/genai-demo/genai-stream/
 ├── go.mod      # Module definition with local replace directive
 ├── main.go     # Streaming demo application
 └── README.md   # This file
