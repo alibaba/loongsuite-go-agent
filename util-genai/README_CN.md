@@ -23,6 +23,9 @@ go get github.com/alibaba/loongsuite-go/util-genai
 | `OTEL_SEMCONV_STABILITY_OPT_IN` | 启用实验性特性 | `gen_ai_latest_experimental` |
 | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | 控制消息内容采集 | `NO_CONTENT`、`SPAN_ONLY`、`EVENT_ONLY`、`SPAN_AND_EVENT` |
 | `OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT` | 控制事件发送 | `true`、`false` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH` | 消息内容卸载的基础路径/URI（设置后即启用上传） | 如 `file:///tmp/genai`、`/var/genai` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_FORMAT` | 上传内容的序列化格式 | `json`（默认）、`jsonl` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_MAX_QUEUE_SIZE` | 异步上传队列的最大长度 | 整数（默认 `20`） |
 
 ## Span 属性
 
@@ -277,6 +280,53 @@ handler := utilgenai.NewTelemetryHandler(
     utilgenai.WithMeterProvider(mp),
 )
 ```
+
+### 事件发送
+
+除 span 外，本包还可按照语义约定发送基于日志的 GenAI 事件。当启用实验模式
+（`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`）**且**
+`OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT=true` 时，`StopLLM`/`FailLLM` 会发送
+`gen_ai.client.inference.operation.details` 事件，
+`StopInvokeAgent`/`FailInvokeAgent` 会发送
+`gen_ai.client.agent.invoke.operation.details` 事件。仅当内容采集设置为
+`EVENT_ONLY` 或 `SPAN_AND_EVENT` 时，事件中才会包含消息内容。
+
+事件通过 OpenTelemetry Logs API 发送。默认使用全局 logger provider，也可通过
+`WithLoggerProvider` 传入自定义 provider：
+
+```go
+handler := utilgenai.NewTelemetryHandler(
+    utilgenai.WithLoggerProvider(loggerProvider),
+)
+```
+
+### 内容上传（卸载）
+
+较大的 prompt 和 response 内容可以卸载到外部存储，而不是内联写入 span。当设置了
+`OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH` 时，handler 会在 span 上标记一个
+基于内容寻址的引用属性（`gen_ai.input.messages_ref`、
+`gen_ai.output.messages_ref`、`gen_ai.system_instructions_ref`、
+`gen_ai.tool.definitions_ref`），并异步上传序列化后的内容。相同内容通过 SHA-256
+去重，因此稳定的系统指令只会上传一次。
+
+默认上传器写入本地文件系统。你可以实现 `Uploader` 接口以接入自定义后端
+（例如对象存储），并传入配置好的 hook：
+
+```go
+hook := utilgenai.NewUploadCompletionHook(
+    utilgenai.WithUploader(myUploader),
+    utilgenai.WithUploadFormat(utilgenai.UploadFormatJSONL),
+)
+handler := utilgenai.NewTelemetryHandler(
+    utilgenai.WithCompletionHook(hook),
+)
+
+// 在关闭时刷新待上传内容。
+defer handler.Shutdown(context.Background())
+```
+
+完整的可运行示例（无需 API key）见
+[`example/genai-observability`](../example/genai-observability)。
 
 ## 支持的操作
 

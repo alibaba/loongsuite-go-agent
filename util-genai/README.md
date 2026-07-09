@@ -23,6 +23,9 @@ This package relies on environment variables to configure capturing of message c
 | `OTEL_SEMCONV_STABILITY_OPT_IN` | Enable experimental features | `gen_ai_latest_experimental` |
 | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | Control message content capture | `NO_CONTENT`, `SPAN_ONLY`, `EVENT_ONLY`, `SPAN_AND_EVENT` |
 | `OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT` | Control event emission | `true`, `false` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH` | Base path/URI for offloading message content (enables upload when set) | e.g. `file:///tmp/genai`, `/var/genai` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_FORMAT` | Serialization format for uploaded content | `json` (default), `jsonl` |
+| `OTEL_INSTRUMENTATION_GENAI_UPLOAD_MAX_QUEUE_SIZE` | Max number of queued async uploads | integer (default `20`) |
 
 ## Span Attributes
 
@@ -283,6 +286,57 @@ handler := utilgenai.NewTelemetryHandler(
     utilgenai.WithMeterProvider(mp),
 )
 ```
+
+### Event Emission
+
+In addition to spans, this package can emit log-based GenAI events following the
+semantic conventions. When experimental mode is enabled
+(`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`) **and**
+`OTEL_INSTRUMENTATION_GENAI_EMIT_EVENT=true`, `StopLLM`/`FailLLM` emit a
+`gen_ai.client.inference.operation.details` event, and
+`StopInvokeAgent`/`FailInvokeAgent` emit a
+`gen_ai.client.agent.invoke.operation.details` event. Message content is included
+in the event only when content capture is set to `EVENT_ONLY` or `SPAN_AND_EVENT`.
+
+Events are emitted through the OpenTelemetry Logs API. By default the global
+logger provider is used; supply your own with `WithLoggerProvider`:
+
+```go
+handler := utilgenai.NewTelemetryHandler(
+    utilgenai.WithLoggerProvider(loggerProvider),
+)
+```
+
+### Content Upload (Offloading)
+
+Large prompt and response payloads can be offloaded to external storage instead
+of being written inline on the span. When
+`OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH` is set, the handler stamps a
+content-addressed reference attribute on the span
+(`gen_ai.input.messages_ref`, `gen_ai.output.messages_ref`,
+`gen_ai.system_instructions_ref`, `gen_ai.tool.definitions_ref`) and uploads the
+serialized content asynchronously. Identical payloads are deduplicated by
+SHA-256, so a stable system instruction is uploaded only once.
+
+The default uploader writes to the local filesystem. Provide a custom backend
+(e.g. object storage) by implementing the `Uploader` interface and passing a
+configured hook:
+
+```go
+hook := utilgenai.NewUploadCompletionHook(
+    utilgenai.WithUploader(myUploader),
+    utilgenai.WithUploadFormat(utilgenai.UploadFormatJSONL),
+)
+handler := utilgenai.NewTelemetryHandler(
+    utilgenai.WithCompletionHook(hook),
+)
+
+// Flush pending uploads on shutdown.
+defer handler.Shutdown(context.Background())
+```
+
+A complete runnable example (no API key required) is available under
+[`example/genai-observability`](../example/genai-observability).
 
 ## Supported Operations
 

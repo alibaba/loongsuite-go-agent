@@ -73,6 +73,13 @@ const (
 	AttrGenAISystemInstructions = "gen_ai.system_instructions"
 	AttrGenAIToolDefinitions    = "gen_ai.tool.definitions"
 
+	// GenAI message content reference attributes - set when message content is
+	// offloaded to external storage by a CompletionHook instead of being inlined.
+	AttrGenAIInputMessagesRef      = "gen_ai.input.messages_ref"
+	AttrGenAIOutputMessagesRef     = "gen_ai.output.messages_ref"
+	AttrGenAISystemInstructionsRef = "gen_ai.system_instructions_ref"
+	AttrGenAIToolDefinitionsRef    = "gen_ai.tool.definitions_ref"
+
 	// GenAI token type attribute for metrics
 	AttrGenAITokenType = "gen_ai.token.type"
 
@@ -162,6 +169,16 @@ const (
 	OutputTypeJSON   OutputType = "json"
 	OutputTypeImage  OutputType = "image"
 	OutputTypeSpeech OutputType = "speech"
+)
+
+// Event names for GenAI log-based events (experimental).
+const (
+	// EventGenAIInferenceOperationDetails is emitted for LLM invocations when
+	// event emission is enabled.
+	EventGenAIInferenceOperationDetails = "gen_ai.client.inference.operation.details"
+	// EventGenAIAgentInvokeOperationDetails is emitted for agent invocations when
+	// event emission is enabled.
+	EventGenAIAgentInvokeOperationDetails = "gen_ai.client.agent.invoke.operation.details"
 )
 
 // Metric names for GenAI
