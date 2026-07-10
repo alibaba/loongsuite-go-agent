@@ -58,7 +58,7 @@ func (n fastHttpClientAttrsGetter) GetHttpResponseStatusCode(request fastHttpReq
 }
 
 func (n fastHttpClientAttrsGetter) HasHttpResponse(request fastHttpRequest, response fastHttpResponse, err error) bool {
-	return err == nil
+	return response.statusCode >= 100
 }
 
 func (n fastHttpClientAttrsGetter) GetHttpResponseHeader(request fastHttpRequest, response fastHttpResponse, name string) []string {

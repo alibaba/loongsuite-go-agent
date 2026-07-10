@@ -56,7 +56,7 @@ func (h hertzHttpClientAttrsGetter) GetHttpResponseStatusCode(request *protocol.
 }
 
 func (h hertzHttpClientAttrsGetter) HasHttpResponse(request *protocol.Request, response *protocol.Response, err error) bool {
-	return err == nil
+	return response != nil && response.StatusCode() >= 100
 }
 
 func (h hertzHttpClientAttrsGetter) GetHttpResponseHeader(request *protocol.Request, response *protocol.Response, name string) []string {
