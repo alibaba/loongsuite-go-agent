@@ -10,12 +10,14 @@ on:
       - 'test/**'
       - 'pkg/**'
       - 'tool/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'test/**'
       - 'pkg/**'
       - 'tool/**'
+      - '.github/workflows/**'
 
 jobs:
 
