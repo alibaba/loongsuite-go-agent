@@ -92,7 +92,11 @@ func clientOnExit(call api.CallContext, res *http.Response, err error) {
 			hasResponse: true,
 		}, err)
 	} else {
-		request := data["request"].(*netHttpRequest)
+		// Major #5: 防御性类型断言以避免在 nil 或类型不匹配时 panic；并在失败时降级收尾以保证闭合 span
+		request, ok := data["request"].(*netHttpRequest)
+		if !ok {
+			request = &netHttpRequest{}
+		}
 		netHttpClientInstrumenter.End(ctx, request, &netHttpResponse{}, err)
 	}
 }

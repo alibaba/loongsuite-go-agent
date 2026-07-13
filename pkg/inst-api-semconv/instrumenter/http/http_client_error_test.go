@@ -16,6 +16,7 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"testing"
 )
@@ -49,5 +50,41 @@ func TestNormalizeHTTPClientErrorTypeOther(t *testing.T) {
 func TestNormalizeHTTPClientErrorTypeNil(t *testing.T) {
 	if got := NormalizeHTTPClientErrorType(nil); got != "" {
 		t.Fatalf("expected empty string, got %q", got)
+	}
+}
+
+type customErrorType struct {
+	msg string
+}
+
+func (c customErrorType) Error() string {
+	return c.msg
+}
+
+func (c customErrorType) ErrorType() string {
+	return "my-custom-error-type"
+}
+
+func TestNormalizeHTTPClientErrorTypeCustom(t *testing.T) {
+	err := customErrorType{msg: "error"}
+	if got := NormalizeHTTPClientErrorType(err); got != "my-custom-error-type" {
+		t.Fatalf("expected %q, got %q", "my-custom-error-type", got)
+	}
+}
+
+func TestNormalizeHTTPClientErrorTypeWrapped(t *testing.T) {
+	baseErr := &net.OpError{Op: "dial", Err: errors.New("connection refused")}
+	wrappedErr := fmt.Errorf("middleware failed: %w", baseErr)
+	if got := NormalizeHTTPClientErrorType(wrappedErr); got != "*net.OpError" {
+		t.Fatalf("expected %q, got %q", "*net.OpError", got)
+	}
+}
+
+func TestNormalizeHTTPClientErrorTypeDoubleWrapped(t *testing.T) {
+	baseErr := customErrorType{msg: "db timeout"}
+	wrappedErr1 := fmt.Errorf("db failure: %w", baseErr)
+	wrappedErr2 := fmt.Errorf("app execution failed: %w", wrappedErr1)
+	if got := NormalizeHTTPClientErrorType(wrappedErr2); got != "my-custom-error-type" {
+		t.Fatalf("expected %q, got %q", "my-custom-error-type", got)
 	}
 }

@@ -24,6 +24,9 @@ type HttpClientSpanStatusExtractor[REQUEST any, RESPONSE any] struct {
 }
 
 func (h HttpClientSpanStatusExtractor[REQUEST, RESPONSE]) Extract(span trace.Span, request REQUEST, response RESPONSE, err error) {
+	// Minor #10: 客户端 Extract 在 err != nil 时提前返回，不调用 span.RecordError(err)。
+	// 这是因为 InternalInstrumenter.doEnd 会优先在 Extractor 之前调用 RecordError 并将状态设为 Error，
+	// 此处直接 early return 避免重复记录，属于有意设计的隐式依赖关系。
 	if err != nil {
 		return
 	}
