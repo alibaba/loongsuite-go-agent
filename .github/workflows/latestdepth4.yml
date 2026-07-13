@@ -21,13 +21,18 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go_version:
+          - 1.24
+          - 1.25
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.24'
+        go-version: ${{ matrix.go_version }}
 
     - name: Build
       run: make build

@@ -27,6 +27,7 @@ jobs:
       matrix:
         go_version:
           - 1.24
+          - 1.25
         os:
           - ubuntu-latest
     steps:
