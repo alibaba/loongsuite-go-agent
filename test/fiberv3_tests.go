@@ -25,6 +25,9 @@ func init() {
 		NewGeneralTestCase("basic-fiberv3s-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3Https),
 		NewGeneralTestCase("basic-fiberv3-metrics-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3Metrics),
 		NewLatestDepthTestCase("fiberv3-latestdepth", fiberv3_dependency_name, fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3),
+		// Custom-ctx apps route through (*App).customRequestHandler on fiber
+		// >= v3.3.0; run it as a latest-depth test so it exercises that path.
+		NewLatestDepthTestCase("fiberv3-custom-ctx-latestdepth", fiberv3_dependency_name, fiberv3_module_name, "v3.3.0", "", "1.25", "", TestBasicFiberv3CustomCtx),
 		NewMuzzleTestCase("fiberv3-muzzle", fiberv3_dependency_name, fiberv3_module_name, "v3.0.0", "", "1.25", "", []string{"go", "build", "fiber_http.go"}))
 }
 
@@ -44,4 +47,10 @@ func TestBasicFiberv3Metrics(t *testing.T, env ...string) {
 	UseApp("fiberv3/v3.0.0")
 	RunGoBuild(t, "go", "build", "fiber_http_metrics.go")
 	RunApp(t, "fiber_http_metrics", env...)
+}
+
+func TestBasicFiberv3CustomCtx(t *testing.T, env ...string) {
+	UseApp("fiberv3/v3.0.0")
+	RunGoBuild(t, "go", "build", "fiber_custom_ctx.go")
+	RunApp(t, "fiber_custom_ctx", env...)
 }
