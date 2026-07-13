@@ -1,16 +1,30 @@
 [
   {
-    "Version": "[2.6.3,)",
+    "Version": "[2.6.3,3.0.0)",
     "ImportPath": "github.com/go-kratos/kratos/v2/transport/http",
     "Function": "NewServer",
     "OnEnter": "kratosNewHTTPServiceOnEnter",
     "Path": "github.com/alibaba/loongsuite-go/pkg/rules/kratos/http"
   },
   {
-    "Version": "[2.6.3,)",
+    "Version": "[2.6.3,3.0.0)",
     "ImportPath": "github.com/go-kratos/kratos/v2/transport/grpc",
     "Function": "NewServer",
     "OnEnter": "kratosNewGRPCServiceOnEnter",
     "Path": "github.com/alibaba/loongsuite-go/pkg/rules/kratos/grpc"
+  },
+  {
+    "Version": "[3.0.0,)",
+    "ImportPath": "github.com/go-kratos/kratos/v3/transport/http",
+    "Function": "NewServer",
+    "OnEnter": "kratosNewHTTPServiceOnEnterV3",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/kratosv3/http"
+  },
+  {
+    "Version": "[3.0.0,)",
+    "ImportPath": "github.com/go-kratos/kratos/v3/transport/grpc",
+    "Function": "NewServer",
+    "OnEnter": "kratosNewGRPCServiceOnEnterV3",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/kratosv3/grpc"
   }
 ]
