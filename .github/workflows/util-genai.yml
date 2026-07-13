@@ -1,0 +1,52 @@
+# This workflow builds and tests the util-genai module and its integration tests.
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: UtilGenAI
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'util-genai/**'
+      - '.github/workflows/util-genai.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'util-genai/**'
+      - '.github/workflows/util-genai.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # go.sum and vendor/ are git-ignored repo-wide, so resolve modules from the
+    # network at build time instead of expecting a checked-in go.sum/vendor.
+    env:
+      GOFLAGS: -mod=mod
+    strategy:
+      matrix:
+        go_version:
+          - 1.24
+          - 1.25
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go_version }}
+
+    - name: Build (library)
+      working-directory: util-genai
+      run: go build ./...
+
+    - name: Vet (library)
+      working-directory: util-genai
+      run: go vet ./...
+
+    - name: Unit tests (library)
+      working-directory: util-genai
+      run: go test -race -v -coverprofile=coverage.txt -covermode=atomic ./...
+
+    - name: Integration tests
+      working-directory: util-genai/integration
+      run: go test -race -v ./...
