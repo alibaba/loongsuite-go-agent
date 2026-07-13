@@ -21,4 +21,8 @@ type kratosRequest struct {
 	serviceVersion  string
 	serviceEndpoint []string
 	serviceMeta     map[string]string
+	// spanKind distinguishes the direction of the call: "server" or "client".
+	spanKind string
+	// operation is the RPC operation (e.g. the method path) reported by the transport.
+	operation string
 }

@@ -26,6 +26,21 @@ import (
 	"time"
 )
 
+// findKratosSpan returns the first span across all traces whose kratos.span.kind
+// attribute matches the given kind. Looking up by attribute (rather than a fixed
+// index) keeps the assertions stable regardless of how many transport spans the
+// trace contains.
+func findKratosSpan(stubs []tracetest.SpanStubs, spanKind string) *tracetest.SpanStub {
+	for _, trace := range stubs {
+		for i := range trace {
+			if verifier.GetAttribute(trace[i].Attributes, "kratos.span.kind").AsString() == spanKind {
+				return &trace[i]
+			}
+		}
+	}
+	return nil
+}
+
 func main() {
 	go func() {
 		startup()
@@ -50,29 +65,46 @@ func main() {
 	fmt.Printf("[grpc] SayHello %+v\n", reply)
 
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
-		protocolType := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.protocol.type").AsString()
+		server := findKratosSpan(stubs, "server")
+		if server == nil {
+			panic("kratos server span not found")
+		}
+		protocolType := verifier.GetAttribute(server.Attributes, "kratos.protocol.type").AsString()
 		if protocolType != "grpc" {
 			panic("protocol type should be grpc, actually got " + protocolType)
 		}
-		serviceName := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.name").AsString()
+		serviceName := verifier.GetAttribute(server.Attributes, "kratos.service.name").AsString()
 		if serviceName != "opentelemetry-kratos-server" {
 			panic("service name should be opentelemetry-kratos-server, actually got " + serviceName)
 		}
-		serviceId := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.id").AsString()
+		serviceId := verifier.GetAttribute(server.Attributes, "kratos.service.id").AsString()
 		if serviceId != "opentelemetry-id" {
 			panic("service id should be opentelemetry-id, actually got " + serviceId)
 		}
-		serviceVersion := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.version").AsString()
+		serviceVersion := verifier.GetAttribute(server.Attributes, "kratos.service.version").AsString()
 		if serviceVersion != "v1" {
 			panic("service version should be v1, actually got " + serviceVersion)
 		}
-		serviceMetaAgent := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.meta.agent").AsString()
+		serviceMetaAgent := verifier.GetAttribute(server.Attributes, "kratos.service.meta.agent").AsString()
 		if serviceMetaAgent != "opentelemetry-go" {
 			panic("service meta agent should be opentelemetry-go, actually got " + serviceMetaAgent)
 		}
-		serviceEndpoint := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.endpoint").AsStringSlice()
+		serviceEndpoint := verifier.GetAttribute(server.Attributes, "kratos.service.endpoint").AsStringSlice()
 		if !strings.Contains(serviceEndpoint[0], ":9000") || !strings.Contains(serviceEndpoint[1], ":8000") {
 			panic("service endpoint should be grpc://30.221.144.142:9000 http://30.221.144.142:8000, actually got " + fmt.Sprintf("%v", serviceEndpoint))
+		}
+
+		client := findKratosSpan(stubs, "client")
+		if client == nil {
+			panic("kratos client span not found")
+		}
+		clientProtocol := verifier.GetAttribute(client.Attributes, "kratos.protocol.type").AsString()
+		if clientProtocol != "grpc" {
+			panic("client protocol type should be grpc, actually got " + clientProtocol)
+		}
+		clientOperation := verifier.GetAttribute(client.Attributes, "kratos.operation").AsString()
+		if !strings.Contains(clientOperation, "SayHello") {
+			panic("client operation should contain SayHello, actually got " + clientOperation)
 		}
 	}, 1)
 }

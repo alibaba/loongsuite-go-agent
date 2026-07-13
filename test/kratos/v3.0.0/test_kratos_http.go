@@ -15,55 +15,92 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/alibaba/loongsuite-go/test/verifier"
+	transhttp "github.com/go-kratos/kratos/v3/transport/http"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"net/http"
+	pb "kratos/v3.0.0/pkg/api/helloworld/v1"
 	"strings"
 	"time"
 )
+
+// findKratosSpan returns the first span across all traces whose kratos.span.kind
+// attribute matches the given kind. Looking up by attribute (rather than a fixed
+// index) keeps the assertions stable regardless of how many transport spans the
+// trace contains.
+func findKratosSpan(stubs []tracetest.SpanStubs, spanKind string) *tracetest.SpanStub {
+	for _, trace := range stubs {
+		for i := range trace {
+			if verifier.GetAttribute(trace[i].Attributes, "kratos.span.kind").AsString() == spanKind {
+				return &trace[i]
+			}
+		}
+	}
+	return nil
+}
 
 func main() {
 	go func() {
 		startup()
 	}()
 	time.Sleep(5 * time.Second)
-	client := http.Client{}
-	client.Get("http://localhost:8000/helloworld/kratos")
-	fmt.Printf("Send http request to kratos")
+	conn, err := transhttp.NewClient(
+		context.Background(),
+		transhttp.WithEndpoint("localhost:8000"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	client := pb.NewGreeterHTTPClient(conn)
+	reply, err := client.SayHello(context.Background(), &pb.HelloRequest{Name: "client"})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("[http] SayHello %+v\n", reply)
 
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
-		for i, _ := range stubs[0] {
-			span := stubs[0][i]
-			println(span.Name)
-			for _, attr := range span.Attributes {
-				fmt.Printf("%v %v\n", attr.Key, attr.Value)
-			}
-			println()
+		server := findKratosSpan(stubs, "server")
+		if server == nil {
+			panic("kratos server span not found")
 		}
-		protocolType := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.protocol.type").AsString()
+		protocolType := verifier.GetAttribute(server.Attributes, "kratos.protocol.type").AsString()
 		if protocolType != "http" {
 			panic("protocol type should be http, actually got " + protocolType)
 		}
-		serviceName := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.name").AsString()
+		serviceName := verifier.GetAttribute(server.Attributes, "kratos.service.name").AsString()
 		if serviceName != "opentelemetry-kratos-server" {
 			panic("service name should be opentelemetry-kratos-server, actually got " + serviceName)
 		}
-		serviceId := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.id").AsString()
+		serviceId := verifier.GetAttribute(server.Attributes, "kratos.service.id").AsString()
 		if serviceId != "opentelemetry-id" {
 			panic("service id should be opentelemetry-id, actually got " + serviceId)
 		}
-		serviceVersion := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.version").AsString()
+		serviceVersion := verifier.GetAttribute(server.Attributes, "kratos.service.version").AsString()
 		if serviceVersion != "v1" {
 			panic("service version should be v1, actually got " + serviceVersion)
 		}
-		serviceMetaAgent := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.meta.agent").AsString()
+		serviceMetaAgent := verifier.GetAttribute(server.Attributes, "kratos.service.meta.agent").AsString()
 		if serviceMetaAgent != "opentelemetry-go" {
 			panic("service meta agent should be opentelemetry-go, actually got " + serviceMetaAgent)
 		}
-		serviceEndpoint := verifier.GetAttribute(stubs[0][2].Attributes, "kratos.service.endpoint").AsStringSlice()
+		serviceEndpoint := verifier.GetAttribute(server.Attributes, "kratos.service.endpoint").AsStringSlice()
 		if !strings.Contains(serviceEndpoint[0], ":9000") || !strings.Contains(serviceEndpoint[1], ":8000") {
 			panic("service endpoint should be grpc://30.221.144.142:9000 http://30.221.144.142:8000, actually got " + fmt.Sprintf("%v", serviceEndpoint))
+		}
+
+		client := findKratosSpan(stubs, "client")
+		if client == nil {
+			panic("kratos client span not found")
+		}
+		clientProtocol := verifier.GetAttribute(client.Attributes, "kratos.protocol.type").AsString()
+		if clientProtocol != "http" {
+			panic("client protocol type should be http, actually got " + clientProtocol)
+		}
+		clientOperation := verifier.GetAttribute(client.Attributes, "kratos.operation").AsString()
+		if !strings.Contains(clientOperation, "SayHello") {
+			panic("client operation should contain SayHello, actually got " + clientOperation)
 		}
 	}, 1)
 }

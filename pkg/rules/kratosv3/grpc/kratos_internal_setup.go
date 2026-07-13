@@ -31,6 +31,11 @@ const OTEL_INSTRUMENTATION_KRATOS_EXPERIMENTAL_SPAN_ENABLE = "OTEL_INSTRUMENTATI
 
 var kratosInternalInstrument = BuildKratosInternalInstrumenter()
 
+// clientInstrumentedKey guards against the client tracing middleware being
+// installed more than once in the same middleware chain (NewClient injects it,
+// and WithMiddleware appends it), which would otherwise emit duplicate spans.
+type clientInstrumentedKey struct{}
+
 //go:linkname kratosNewGRPCServiceOnEnterV3 github.com/go-kratos/kratos/v3/transport/grpc.kratosNewGRPCServiceOnEnterV3
 func kratosNewGRPCServiceOnEnterV3(call api.CallContext, opts ...grpc.ServerOption) {
 	if os.Getenv(OTEL_INSTRUMENTATION_KRATOS_EXPERIMENTAL_SPAN_ENABLE) != "true" {
@@ -38,6 +43,32 @@ func kratosNewGRPCServiceOnEnterV3(call api.CallContext, opts ...grpc.ServerOpti
 	}
 	opts = append(opts, AddGRPCMiddleware(ServerTracingMiddleWare()))
 	call.SetParam(0, opts)
+}
+
+// kratosNewGRPCClientOnEnterV3 injects the client tracing middleware for the case
+// where the user does not pass any WithMiddleware option. When the user does pass
+// one, grpc.WithMiddleware overwrites o.middleware, so kratosGRPCWithMiddlewareOnEnterV3
+// additionally appends the tracing middleware to preserve it.
+//
+//go:linkname kratosNewGRPCClientOnEnterV3 github.com/go-kratos/kratos/v3/transport/grpc.kratosNewGRPCClientOnEnterV3
+func kratosNewGRPCClientOnEnterV3(call api.CallContext, ctx context.Context, opts ...grpc.ClientOption) {
+	if os.Getenv(OTEL_INSTRUMENTATION_KRATOS_EXPERIMENTAL_SPAN_ENABLE) != "true" {
+		return
+	}
+	nopts := []grpc.ClientOption{
+		grpc.WithMiddleware(ClientTracingMiddleWare()),
+	}
+	nopts = append(nopts, opts...)
+	call.SetParam(1, nopts)
+}
+
+//go:linkname kratosGRPCWithMiddlewareOnEnterV3 github.com/go-kratos/kratos/v3/transport/grpc.kratosGRPCWithMiddlewareOnEnterV3
+func kratosGRPCWithMiddlewareOnEnterV3(call api.CallContext, m ...middleware.Middleware) {
+	if os.Getenv(OTEL_INSTRUMENTATION_KRATOS_EXPERIMENTAL_SPAN_ENABLE) != "true" {
+		return
+	}
+	m = append(m, ClientTracingMiddleWare())
+	call.SetParam(0, m)
 }
 
 func AddHTTPMiddleware(m middleware.Middleware) http.ServerOption {
@@ -52,45 +83,62 @@ func AddGRPCMiddleware(m middleware.Middleware) grpc.ServerOption {
 	}
 }
 
+func buildKratosRequest(ctx context.Context, tr transport.Transporter, spanKind string) kratosRequest {
+	serviceName, serviceId, serviceVersion := "", "", ""
+	serviceEndpoint := make([]string, 0, 0)
+	serviceMeta := make(map[string]string)
+	app, hasApp := kt.FromContext(ctx)
+	if hasApp {
+		serviceName, serviceId, serviceVersion, serviceEndpoint = app.Name(), app.ID(), app.Version(), app.Endpoint()
+		serviceMeta = app.Metadata()
+	}
+	request := kratosRequest{
+		serviceId:       serviceId,
+		serviceName:     serviceName,
+		serviceVersion:  serviceVersion,
+		serviceEndpoint: serviceEndpoint,
+		serviceMeta:     serviceMeta,
+		spanKind:        spanKind,
+		operation:       tr.Operation(),
+	}
+	switch tr.Kind() {
+	case transport.KindGRPC:
+		request.protocolType = "grpc"
+	case transport.KindHTTP:
+		request.protocolType = "http"
+	}
+	return request
+}
+
 func ServerTracingMiddleWare() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				serviceName, serviceId, serviceVersion := "", "", ""
-				serviceEndpoint := make([]string, 0, 0)
-				serviceMeta := make(map[string]string)
-				app, hasApp := kt.FromContext(ctx)
-				if hasApp {
-					serviceName, serviceId, serviceVersion, serviceEndpoint = app.Name(), app.ID(), app.Version(), app.Endpoint()
-					serviceMeta = app.Metadata()
-				}
-				var (
-					request kratosRequest
-					sCtx    context.Context
-				)
-				request = kratosRequest{
-					serviceId:       serviceId,
-					serviceName:     serviceName,
-					serviceVersion:  serviceVersion,
-					serviceEndpoint: serviceEndpoint,
-					serviceMeta:     serviceMeta,
-				}
-				switch tr.Kind() {
-				case transport.KindGRPC:
-					request.protocolType = "grpc"
-					sCtx = kratosInternalInstrument.Start(ctx, request)
-				case transport.KindHTTP:
-					request.protocolType = "http"
-					sCtx = kratosInternalInstrument.Start(ctx, request)
-				}
+				request := buildKratosRequest(ctx, tr, spanKindServer)
+				sCtx := kratosInternalInstrument.Start(ctx, request)
 				defer func() {
-					if err != nil {
-						kratosInternalInstrument.End(sCtx, request, nil, err)
-					} else {
-						kratosInternalInstrument.End(sCtx, request, nil, err)
-					}
+					kratosInternalInstrument.End(sCtx, request, nil, err)
 				}()
+			}
+			return handler(ctx, req)
+		}
+	}
+}
 
+func ClientTracingMiddleWare() middleware.Middleware {
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			if tr, ok := transport.FromClientContext(ctx); ok {
+				if ctx.Value(clientInstrumentedKey{}) != nil {
+					return handler(ctx, req)
+				}
+				ctx = context.WithValue(ctx, clientInstrumentedKey{}, struct{}{})
+				request := buildKratosRequest(ctx, tr, spanKindClient)
+				sCtx := kratosInternalInstrument.Start(ctx, request)
+				defer func() {
+					kratosInternalInstrument.End(sCtx, request, nil, err)
+				}()
+				return handler(sCtx, req)
 			}
 			return handler(ctx, req)
 		}

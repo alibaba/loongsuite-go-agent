@@ -30,6 +30,11 @@ const kratos_service_id = "kratos.service.id"
 const kratos_service_version = "kratos.service.version"
 const kratos_service_meta = "kratos.service.meta"
 const kratos_service_endpoint = "kratos.service.endpoint"
+const kratos_span_kind = "kratos.span.kind"
+const kratos_operation = "kratos.operation"
+
+const spanKindServer = "server"
+const spanKindClient = "client"
 
 type kratosExperimentalAttributeExtractor struct {
 }
@@ -50,6 +55,12 @@ func (k kratosExperimentalAttributeExtractor) OnStart(attributes []attribute.Key
 	}, attribute.KeyValue{
 		Key:   kratos_service_endpoint,
 		Value: attribute.StringSliceValue(request.serviceEndpoint),
+	}, attribute.KeyValue{
+		Key:   kratos_span_kind,
+		Value: attribute.StringValue(request.spanKind),
+	}, attribute.KeyValue{
+		Key:   kratos_operation,
+		Value: attribute.StringValue(request.operation),
 	})
 	if request.serviceMeta != nil {
 		for k, v := range request.serviceMeta {
@@ -70,13 +81,15 @@ type kratosExperimentalSpanNameExtractor struct {
 }
 
 func (k kratosExperimentalSpanNameExtractor) Extract(request kratosRequest) string {
-	if request.protocolType == "grpc" {
-		return "kratos.grpc." + request.serviceName
+	if request.protocolType != "grpc" && request.protocolType != "http" {
+		return "kratos.unknown"
 	}
-	if request.protocolType == "http" {
-		return "kratos.http." + request.serviceName
+	// Client spans are named by operation, which carries the callee method; the
+	// kratos App metadata (serviceName) is usually absent on the client side.
+	if request.spanKind == spanKindClient {
+		return "kratos." + request.protocolType + ".client." + request.operation
 	}
-	return "kratos.unknown"
+	return "kratos." + request.protocolType + "." + request.serviceName
 }
 
 func BuildKratosInternalInstrumenter() instrumenter.Instrumenter[kratosRequest, any] {
