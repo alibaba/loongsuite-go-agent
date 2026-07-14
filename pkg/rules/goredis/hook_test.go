@@ -50,6 +50,14 @@ func TestRedisSpanEndErr(t *testing.T) {
 func TestGetRedisV9Statement(t *testing.T) {
 	cmd := redis.NewCmd(context.Background(), "get", "mykey")
 	assert.Contains(t, getRedisV9Statement(cmd), "get mykey")
+
+	// Explicit err.Error() append is skipped for redis.Nil (errors.Is filter).
+	// *redis.Cmd Stringer may still include the sentinel in its own format.
+	cmd.SetErr(redis.Nil)
+	assert.Contains(t, getRedisV9Statement(cmd), "get mykey")
+
+	cmd.SetErr(errors.New("connection refused"))
+	assert.Contains(t, getRedisV9Statement(cmd), "connection refused")
 }
 
 func TestProcessHook_RedisNilNotError(t *testing.T) {

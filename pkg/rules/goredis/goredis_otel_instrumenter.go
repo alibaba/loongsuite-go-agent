@@ -97,7 +97,7 @@ func getRedisV9Statement(cmd redis.Cmder) string {
 
 	if cmd, ok := cmd.(*redis.Cmd); ok {
 		b = append(b, ": "...)
-		b = redisV9AppendArg(b, cmd.Name())
+		b = redisV9AppendArg(b, cmd)
 	}
 
 	return redisV9String(b)

@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package goredis
+package rueidisnil
 
-import (
-	"errors"
+import "github.com/redis/rueidis"
 
-	redis "github.com/redis/go-redis/v9"
-)
-
-// redisSpanEndErr returns the error to pass to Instrumenter.End.
-// It mirrors upstream otelc go-redis v9 hook logic:
-//
-//	if err != nil && !errors.Is(err, redis.Nil) {
-//	    span.SetStatus(codes.Error, err.Error())
-//	}
-//
-// See: https://github.com/open-telemetry/opentelemetry-go-compile-instrumentation/blob/main/instrumentation/github.com/redis/go-redis/v9/hook.go
-// See also: pkg/rules/goredisv8/redis_error.go (same nil-filtering logic for v8).
-func redisSpanEndErr(err error) error {
-	if err != nil && !errors.Is(err, redis.Nil) {
+// SpanEndErr returns the error to pass to Instrumenter.End.
+// rueidis nil replies must not mark the span as Error.
+func SpanEndErr(err error) error {
+	if err != nil && !rueidis.IsRedisNil(err) {
 		return err
+	}
+	return nil
+}
+
+// IsSpanError reports whether err should mark the span as failed.
+func IsSpanError(err error) bool {
+	return SpanEndErr(err) != nil
+}
+
+// FirstError returns the first non-nil Redis error that is not a redis nil reply.
+func FirstError(errs []error) error {
+	for _, err := range errs {
+		if IsSpanError(err) {
+			return err
+		}
 	}
 	return nil
 }

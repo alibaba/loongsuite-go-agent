@@ -74,8 +74,8 @@ func BuildRedisv8Instrumenter() instrumenter.Instrumenter[redisv8Data, any] {
 		BuildInstrumenter()
 }
 
-// getRedisV8Statement follows the same statement rules as upstream otelc
-// getRedisV9Statement for go-redis v9.
+// getRedisV8Statement builds db.query.text from command args.
+// Explicit error text is appended only for non-nil errors excluding redis.Nil.
 func getRedisV8Statement(cmd redis.Cmder) string {
 	b := make([]byte, 0, 64)
 
@@ -93,7 +93,7 @@ func getRedisV8Statement(cmd redis.Cmder) string {
 
 	if cmd, ok := cmd.(*redis.Cmd); ok {
 		b = append(b, ": "...)
-		b = redisV8AppendArg(b, cmd.Name())
+		b = redisV8AppendArg(b, cmd)
 	}
 	return redisV8String(b)
 }

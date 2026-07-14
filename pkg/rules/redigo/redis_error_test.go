@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package goredis
+package redigo
 
 import (
 	"errors"
+	"testing"
 
-	redis "github.com/redis/go-redis/v9"
+	"github.com/gomodule/redigo/redis"
 )
 
-// redisSpanEndErr returns the error to pass to Instrumenter.End.
-// It mirrors upstream otelc go-redis v9 hook logic:
-//
-//	if err != nil && !errors.Is(err, redis.Nil) {
-//	    span.SetStatus(codes.Error, err.Error())
-//	}
-//
-// See: https://github.com/open-telemetry/opentelemetry-go-compile-instrumentation/blob/main/instrumentation/github.com/redis/go-redis/v9/hook.go
-// See also: pkg/rules/goredisv8/redis_error.go (same nil-filtering logic for v8).
-func redisSpanEndErr(err error) error {
-	if err != nil && !errors.Is(err, redis.Nil) {
-		return err
+func TestRedigoSpanEndErr(t *testing.T) {
+	if got := redigoSpanEndErr(nil); got != nil {
+		t.Fatalf("nil should stay nil, got %v", got)
 	}
-	return nil
+	if got := redigoSpanEndErr(redis.ErrNil); got != nil {
+		t.Fatalf("redis.ErrNil must not mark span error, got %v", got)
+	}
+	realErr := errors.New("connection refused")
+	if got := redigoSpanEndErr(realErr); got != realErr {
+		t.Fatalf("real error must be preserved, got %v", got)
+	}
 }

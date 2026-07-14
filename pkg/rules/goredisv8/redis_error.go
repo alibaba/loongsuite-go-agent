@@ -14,6 +14,7 @@ import (
 //	}
 //
 // go-redis v8 uses the same redis.Nil sentinel for protocol nil replies.
+// See also: pkg/rules/goredis/redis_error.go (same nil-filtering logic for v9).
 func redisSpanEndErr(err error) error {
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return err
