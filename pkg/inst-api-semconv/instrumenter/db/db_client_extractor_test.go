@@ -16,7 +16,9 @@ package db
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net"
 	"testing"
 
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/utils"
@@ -112,6 +114,32 @@ func TestDbClientExtractorEnd(t *testing.T) {
 	}
 	if attrs[3].Key != semconv.ServerAddressKey || attrs[3].Value.AsString() != "test" {
 		t.Fatalf("db statement key should be test")
+	}
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			t.Fatalf("success path must not set error.type")
+		}
+	}
+}
+
+func TestDbClientExtractorEndSetsErrorType(t *testing.T) {
+	dbExtractor := DbClientAttrsExtractor[testRequest, testResponse, mongoAttrsGetter]{}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	opErr := &net.OpError{Op: "dial", Err: errors.New("connection refused")}
+	attrs, _ = dbExtractor.OnEnd(attrs, parentContext, testRequest{Name: "redis"}, testResponse{}, opErr)
+
+	var found bool
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			found = true
+			if attr.Value.AsString() != "*net.OpError" {
+				t.Fatalf("error.type should be *net.OpError, got %q", attr.Value.AsString())
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("failed DB operation must set error.type")
 	}
 }
 

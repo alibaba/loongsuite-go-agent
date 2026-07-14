@@ -66,13 +66,25 @@ func TestDbMetricAttributesShadower(t *testing.T) {
 	}, attribute.KeyValue{
 		Key:   semconv.ServerAddressKey,
 		Value: attribute.StringValue("abc"),
+	}, attribute.KeyValue{
+		Key:   semconv.ErrorTypeKey,
+		Value: attribute.StringValue("*net.OpError"),
 	})
 	n, attrs := utils.Shadow(attrs, dbMetricsConv)
-	if n != 3 {
+	if n != 4 {
 		panic("wrong shadow array")
 	}
-	if attrs[3].Key != "unknown" {
+	if attrs[4].Key != "unknown" {
 		panic("unknown should be the last attribute")
+	}
+	foundErrorType := false
+	for i := 0; i < n; i++ {
+		if attrs[i].Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+		}
+	}
+	if !foundErrorType {
+		panic("error.type should be kept as a metric attribute")
 	}
 }
 
