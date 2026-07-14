@@ -15,7 +15,9 @@
 package goredis
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/db"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/instrumenter"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/utils"
@@ -49,7 +51,7 @@ func (d goRedisAttrsGetter) GetStatement(request goRedisRequest) string {
 		b = redisV9AppendArg(b, arg)
 	}
 
-	if err := request.cmd.Err(); err != nil {
+	if err := request.cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
 		b = append(b, ": "...)
 		b = append(b, err.Error()...)
 	}
