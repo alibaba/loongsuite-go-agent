@@ -45,25 +45,7 @@ func (d goRedisV8AttrsGetter) GetBatchSize(request redisv8Data) int {
 }
 
 func (d goRedisV8AttrsGetter) GetStatement(request redisv8Data) string {
-	b := make([]byte, 0, 64)
-
-	for i, arg := range request.cmd.Args() {
-		if i > 0 {
-			b = append(b, ' ')
-		}
-		b = redisV8AppendArg(b, arg)
-	}
-
-	if err := request.cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
-		b = append(b, ": "...)
-		b = append(b, err.Error()...)
-	}
-
-	if cmd, ok := request.cmd.(*redis.Cmd); ok {
-		b = append(b, ": "...)
-		b = redisV8AppendArg(b, cmd)
-	}
-	return redisV8String(b)
+	return getRedisV8Statement(request.cmd)
 }
 
 func (d goRedisV8AttrsGetter) GetCollection(request redisv8Data) string {
@@ -90,4 +72,28 @@ func BuildRedisv8Instrumenter() instrumenter.Instrumenter[redisv8Data, any] {
 			Version: version.Tag,
 		}).
 		BuildInstrumenter()
+}
+
+// getRedisV8Statement follows the same statement rules as upstream otelc
+// getRedisV9Statement for go-redis v9.
+func getRedisV8Statement(cmd redis.Cmder) string {
+	b := make([]byte, 0, 64)
+
+	for i, arg := range cmd.Args() {
+		if i > 0 {
+			b = append(b, ' ')
+		}
+		b = redisV8AppendArg(b, arg)
+	}
+
+	if err := cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
+		b = append(b, ": "...)
+		b = append(b, err.Error()...)
+	}
+
+	if cmd, ok := cmd.(*redis.Cmd); ok {
+		b = append(b, ": "...)
+		b = redisV8AppendArg(b, cmd.Name())
+	}
+	return redisV8String(b)
 }

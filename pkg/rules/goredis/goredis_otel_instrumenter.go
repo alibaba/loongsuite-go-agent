@@ -42,26 +42,7 @@ func (d goRedisAttrsGetter) GetServerAddress(request goRedisRequest) string {
 }
 
 func (d goRedisAttrsGetter) GetStatement(request goRedisRequest) string {
-	b := make([]byte, 0, 64)
-
-	for i, arg := range request.cmd.Args() {
-		if i > 0 {
-			b = append(b, ' ')
-		}
-		b = redisV9AppendArg(b, arg)
-	}
-
-	if err := request.cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
-		b = append(b, ": "...)
-		b = append(b, err.Error()...)
-	}
-
-	if cmd, ok := request.cmd.(*redis.Cmd); ok {
-		b = append(b, ": "...)
-		b = redisV9AppendArg(b, cmd)
-	}
-
-	return redisV9String(b)
+	return getRedisV9Statement(request.cmd)
 }
 
 func (d goRedisAttrsGetter) GetOperation(request goRedisRequest) string {
@@ -96,6 +77,30 @@ func BuildGoRedisOtelInstrumenter() instrumenter.Instrumenter[goRedisRequest, an
 			Version: version.Tag,
 		}).
 		BuildInstrumenter()
+}
+
+// getRedisV9Statement mirrors upstream otelc go-redis v9 hook.go.
+func getRedisV9Statement(cmd redis.Cmder) string {
+	b := make([]byte, 0, 64)
+
+	for i, arg := range cmd.Args() {
+		if i > 0 {
+			b = append(b, ' ')
+		}
+		b = redisV9AppendArg(b, arg)
+	}
+
+	if err := cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
+		b = append(b, ": "...)
+		b = append(b, err.Error()...)
+	}
+
+	if cmd, ok := cmd.(*redis.Cmd); ok {
+		b = append(b, ": "...)
+		b = redisV9AppendArg(b, cmd.Name())
+	}
+
+	return redisV9String(b)
 }
 
 func redisV9String(b []byte) string {

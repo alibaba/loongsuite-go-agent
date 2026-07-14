@@ -16,7 +16,6 @@ package goredis
 
 import (
 	"context"
-	"errors"
 	"net"
 	"os"
 	"strings"
@@ -125,7 +124,9 @@ func (o *otRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 		}
 		ctx = goRedisInstrumenter.Start(ctx, request)
 		err := next(ctx, cmd)
-		goRedisInstrumenter.End(ctx, request, nil, redisV9EndErr(err))
+		// Mirrors otelc ProcessHook: always return err to caller; only non-nil
+		// errors excluding redis.Nil are passed to Instrumenter.End.
+		goRedisInstrumenter.End(ctx, request, nil, redisSpanEndErr(err))
 		return err
 	}
 }
@@ -150,14 +151,7 @@ func (o *otRedisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.
 		}
 		ctx = goRedisInstrumenter.Start(ctx, request)
 		err := next(ctx, cmds)
-		goRedisInstrumenter.End(ctx, request, nil, redisV9EndErr(err))
+		goRedisInstrumenter.End(ctx, request, nil, redisSpanEndErr(err))
 		return err
 	}
-}
-
-func redisV9EndErr(err error) error {
-	if errors.Is(err, redis.Nil) {
-		return nil
-	}
-	return err
 }

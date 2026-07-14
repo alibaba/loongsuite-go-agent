@@ -81,9 +81,9 @@ func clusterClientDoOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -164,9 +164,9 @@ func clusterClientReceiveOnExit(call api.CallContext, err error) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(err))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(err))
 	}
 }
 
@@ -205,9 +205,9 @@ func clusterClientDoCacheOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -287,9 +287,9 @@ func clusterClientDoStreamOnExit(call api.CallContext, r rueidis.RedisResultStre
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -328,9 +328,9 @@ func clusterClientDoMultiStreamOnExit(call api.CallContext, r rueidis.MultiRedis
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -369,9 +369,9 @@ func singleClientDoOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -452,9 +452,9 @@ func singleClientReceiveOnExit(call api.CallContext, err error) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(err))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(err))
 	}
 }
 
@@ -493,9 +493,9 @@ func singleClientDoCacheOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -575,9 +575,9 @@ func singleClientDoStreamOnExit(call api.CallContext, r rueidis.RedisResultStrea
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -616,9 +616,9 @@ func singleClientDoMultiStreamOnExit(call api.CallContext, r rueidis.MultiRedisR
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -657,9 +657,9 @@ func sentinelClientDoOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -740,9 +740,9 @@ func sentinelClientReceiveOnExit(call api.CallContext, err error) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(err))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(err))
 	}
 }
 
@@ -781,9 +781,9 @@ func sentinelClientDoCacheOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -863,9 +863,9 @@ func sentinelClientDoStreamOnExit(call api.CallContext, r rueidis.RedisResultStr
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -904,9 +904,9 @@ func sentinelClientDoMultiStreamOnExit(call api.CallContext, r rueidis.MultiRedi
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -945,9 +945,9 @@ func standaloneDoOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -1028,9 +1028,9 @@ func standaloneReceiveOnExit(call api.CallContext, err error) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(err))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, endErr(err))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(err))
 	}
 }
 
@@ -1069,9 +1069,9 @@ func standaloneDoCacheOnExit(call api.CallContext, r rueidis.RedisResult) {
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -1151,9 +1151,9 @@ func standaloneDoStreamOnExit(call api.CallContext, r rueidis.RedisResultStream)
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 
@@ -1192,33 +1192,30 @@ func standaloneDoMultiStreamOnExit(call api.CallContext, r rueidis.MultiRedisRes
 	ctx := data["ctx"].(context.Context)
 	request := data["request"].(*goRueidisRequest)
 	if request != nil {
-		goRueidisInstrumenter.End(ctx, request, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, request, nil, rueidisSpanEndErr(r.Error()))
 	} else {
-		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, redisResultEndErr(r))
+		goRueidisInstrumenter.End(ctx, &goRueidisRequest{}, nil, rueidisSpanEndErr(r.Error()))
 	}
 }
 func firstError(s []rueidis.RedisResult) error {
 	for _, result := range s {
-		if err := result.Error(); errCheck(err) {
+		if err := result.Error(); isRueidisSpanError(err) {
 			return err
 		}
 	}
 	return nil
 }
 
-func redisResultEndErr(r rueidis.RedisResult) error {
-	return endErr(r.Error())
-}
-
-func endErr(err error) error {
-	if rueidis.IsRedisNil(err) {
-		return nil
+// rueidisSpanEndErr mirrors otelc redis.Nil handling for rueidis nil replies.
+func rueidisSpanEndErr(err error) error {
+	if err != nil && !rueidis.IsRedisNil(err) {
+		return err
 	}
-	return err
+	return nil
 }
 
-func errCheck(err error) bool {
-	return err != nil && !rueidis.IsRedisNil(err)
+func isRueidisSpanError(err error) bool {
+	return rueidisSpanEndErr(err) != nil
 }
 
 func processCommandMulti(multi []rueidis.Completed) command {
