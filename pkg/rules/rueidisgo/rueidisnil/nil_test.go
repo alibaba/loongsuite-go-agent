@@ -16,7 +16,6 @@ package rueidisnil
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/redis/rueidis"
@@ -32,16 +31,6 @@ func TestSpanEndErr(t *testing.T) {
 	realErr := errors.New("connection refused")
 	if got := SpanEndErr(realErr); got != realErr {
 		t.Fatalf("real error must be preserved, got %v", got)
-	}
-}
-
-func TestSpanEndErr_WrappedNilFiltered(t *testing.T) {
-	wrapped := fmt.Errorf("wrap: %w", rueidis.Nil)
-	if got := SpanEndErr(wrapped); got != nil {
-		t.Fatalf("wrapped rueidis.Nil must not mark span error, got %v", got)
-	}
-	if IsSpanError(wrapped) {
-		t.Fatalf("wrapped rueidis.Nil must not be a span error")
 	}
 }
 

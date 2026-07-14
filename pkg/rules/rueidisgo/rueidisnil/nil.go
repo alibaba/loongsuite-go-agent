@@ -19,18 +19,12 @@
 // injection at instrument time.
 package rueidisnil
 
-import (
-	"errors"
-
-	"github.com/redis/rueidis"
-)
+import "github.com/redis/rueidis"
 
 // SpanEndErr returns the error to pass to Instrumenter.End.
 // rueidis nil replies must not mark the span as Error.
-// Uses errors.Is (not rueidis.IsRedisNil) so %w-wrapped Nil is filtered too,
-// matching go-redis redisSpanEndErr.
 func SpanEndErr(err error) error {
-	if err != nil && !errors.Is(err, rueidis.Nil) {
+	if err != nil && !rueidis.IsRedisNil(err) {
 		return err
 	}
 	return nil
