@@ -15,17 +15,63 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
 
+func unwrapFmtWrapped(err error) error {
+	for err != nil {
+		t := reflect.TypeOf(err)
+		if t == nil {
+			break
+		}
+		name := t.String()
+		if name == "*fmt.wrapError" {
+			err = errors.Unwrap(err)
+		} else if name == "*errors.joinError" {
+			if je, ok := err.(interface{ Unwrap() []error }); ok {
+				errs := je.Unwrap()
+				if len(errs) > 0 {
+					err = errs[0]
+				} else {
+					break
+				}
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	return err
+}
+
 // NormalizeDBClientErrorType returns a low-cardinality error.type value for
-// failed DB client operations, matching otelc/HTTPClientErrorType style
-// (concrete Go type name). Empty when err is nil.
+// failed DB client operations, matching HTTP/otelc style (concrete Go type name).
+// Empty when err is nil.
 func NormalizeDBClientErrorType(err error) string {
 	if err == nil {
 		return ""
 	}
+
+	if et, ok := err.(interface{ ErrorType() string }); ok {
+		if s := et.ErrorType(); s != "" {
+			return s
+		}
+	}
+
+	err = unwrapFmtWrapped(err)
+	if err == nil {
+		return ""
+	}
+
+	if et, ok := err.(interface{ ErrorType() string }); ok {
+		if s := et.ErrorType(); s != "" {
+			return s
+		}
+	}
+
 	t := reflect.TypeOf(err)
 	if t == nil {
 		return ""

@@ -88,6 +88,59 @@ func TestDbMetricAttributesShadower(t *testing.T) {
 	}
 }
 
+func TestDbClientMetricsRecordsErrorType(t *testing.T) {
+	reader := metric.NewManualReader()
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName("my-service"),
+		semconv.ServiceVersion("v0.1.0"),
+	)
+	mp := metric.NewMeterProvider(metric.WithResource(res), metric.WithReader(reader))
+	meter := mp.Meter("test-meter")
+	client, err := newDbClientMetric("test", meter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	start := time.Now()
+	ctx = client.OnBeforeStart(ctx, start)
+	ctx = client.OnBeforeEnd(ctx, []attribute.KeyValue{
+		{Key: semconv.DBSystemNameKey, Value: attribute.StringValue("redis")},
+		{Key: semconv.DBOperationNameKey, Value: attribute.StringValue("get")},
+	}, start)
+	client.OnAfterStart(ctx, start)
+	client.OnAfterEnd(ctx, []attribute.KeyValue{
+		{Key: semconv.ErrorTypeKey, Value: attribute.StringValue("*net.OpError")},
+		{Key: "db.query.text", Value: attribute.StringValue("GET k")},
+	}, time.Now())
+
+	rm := &metricdata.ResourceMetrics{}
+	if err := reader.Collect(ctx, rm); err != nil {
+		t.Fatal(err)
+	}
+	hist, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+	if !ok || len(hist.DataPoints) == 0 {
+		t.Fatalf("expected histogram datapoint")
+	}
+	attrs := hist.DataPoints[0].Attributes
+	var found bool
+	for _, kv := range attrs.ToSlice() {
+		if kv.Key == semconv.ErrorTypeKey {
+			found = true
+			if kv.Value.AsString() != "*net.OpError" {
+				t.Fatalf("unexpected error.type %q", kv.Value.AsString())
+			}
+		}
+		if kv.Key == "db.query.text" {
+			t.Fatalf("high-cardinality db.query.text must not be metric attribute")
+		}
+	}
+	if !found {
+		t.Fatalf("metric datapoint must include error.type")
+	}
+}
+
 func TestLazyDbClientMetrics(t *testing.T) {
 	reader := metric.NewManualReader()
 	res := resource.NewWithAttributes(

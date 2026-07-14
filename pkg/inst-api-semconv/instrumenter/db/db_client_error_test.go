@@ -16,9 +16,15 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"testing"
 )
+
+type customDBError struct{}
+
+func (customDBError) Error() string           { return "custom" }
+func (customDBError) ErrorType() string       { return "db.custom" }
 
 func TestNormalizeDBClientErrorType(t *testing.T) {
 	if got := NormalizeDBClientErrorType(nil); got != "" {
@@ -29,5 +35,14 @@ func TestNormalizeDBClientErrorType(t *testing.T) {
 	}
 	if got := NormalizeDBClientErrorType(&net.OpError{}); got != "*net.OpError" {
 		t.Fatalf("unexpected error.type %q", got)
+	}
+	if got := NormalizeDBClientErrorType(fmt.Errorf("dial: %w", &net.OpError{})); got != "*net.OpError" {
+		t.Fatalf("wrapped error should unwrap to *net.OpError, got %q", got)
+	}
+	if got := NormalizeDBClientErrorType(errors.Join(&net.OpError{}, errors.New("a"))); got != "*net.OpError" {
+		t.Fatalf("joined error should use first cause *net.OpError, got %q", got)
+	}
+	if got := NormalizeDBClientErrorType(customDBError{}); got != "db.custom" {
+		t.Fatalf("ErrorType() interface should take precedence, got %q", got)
 	}
 }
