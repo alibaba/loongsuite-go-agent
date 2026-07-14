@@ -16,6 +16,7 @@ package redigo
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/gomodule/redigo/redis"
@@ -27,6 +28,9 @@ func TestRedigoSpanEndErr(t *testing.T) {
 	}
 	if got := redigoSpanEndErr(redis.ErrNil); got != nil {
 		t.Fatalf("redis.ErrNil must not mark span error, got %v", got)
+	}
+	if got := redigoSpanEndErr(fmt.Errorf("wrap: %w", redis.ErrNil)); got != nil {
+		t.Fatalf("wrapped ErrNil must not mark span error, got %v", got)
 	}
 	realErr := errors.New("connection refused")
 	if got := redigoSpanEndErr(realErr); got != realErr {

@@ -1199,11 +1199,12 @@ func standaloneDoMultiStreamOnExit(call api.CallContext, r rueidis.MultiRedisRes
 	}
 }
 func firstError(s []rueidis.RedisResult) error {
-	errs := make([]error, 0, len(s))
 	for _, result := range s {
-		errs = append(errs, result.Error())
+		if err := result.Error(); rueidisnil.IsSpanError(err) {
+			return err
+		}
 	}
-	return rueidisnil.FirstError(errs)
+	return nil
 }
 
 func processCommandMulti(multi []rueidis.Completed) command {

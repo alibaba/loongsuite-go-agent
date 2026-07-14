@@ -8,6 +8,7 @@ require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/redis/rueidis v1.0.30
 	go.opentelemetry.io/otel/trace v1.40.0
+
 )
 
 require (

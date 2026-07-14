@@ -74,8 +74,12 @@ func BuildRedisv8Instrumenter() instrumenter.Instrumenter[redisv8Data, any] {
 		BuildInstrumenter()
 }
 
-// getRedisV8Statement builds db.query.text from command args.
-// Explicit error text is appended only for non-nil errors excluding redis.Nil.
+// getRedisV8Statement builds db.query.text.
+//
+// Keeps loongsuite's historical format by appending *redis.Cmd via its Stringer
+// (not cmd.Name()). Explicit err.Error() text is skipped for redis.Nil to avoid
+// duplicating the sentinel already present in cmd.String(); the statement may
+// still contain "redis: nil" via that Stringer.
 func getRedisV8Statement(cmd redis.Cmder) string {
 	b := make([]byte, 0, 64)
 

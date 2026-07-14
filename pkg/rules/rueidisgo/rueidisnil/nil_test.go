@@ -16,6 +16,7 @@ package rueidisnil
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/redis/rueidis"
@@ -34,6 +35,16 @@ func TestSpanEndErr(t *testing.T) {
 	}
 }
 
+func TestSpanEndErr_WrappedNilFiltered(t *testing.T) {
+	wrapped := fmt.Errorf("wrap: %w", rueidis.Nil)
+	if got := SpanEndErr(wrapped); got != nil {
+		t.Fatalf("wrapped rueidis.Nil must not mark span error, got %v", got)
+	}
+	if IsSpanError(wrapped) {
+		t.Fatalf("wrapped rueidis.Nil must not be a span error")
+	}
+}
+
 func TestIsSpanError(t *testing.T) {
 	if IsSpanError(nil) || IsSpanError(rueidis.Nil) {
 		t.Fatalf("nil sentinels must not be span errors")
@@ -44,12 +55,23 @@ func TestIsSpanError(t *testing.T) {
 }
 
 func TestFirstError(t *testing.T) {
+	if got := FirstError(nil); got != nil {
+		t.Fatalf("nil slice should return nil, got %v", got)
+	}
+	if got := FirstError([]error{}); got != nil {
+		t.Fatalf("empty slice should return nil, got %v", got)
+	}
 	if got := FirstError([]error{nil, rueidis.Nil}); got != nil {
 		t.Fatalf("nil sentinels only should return nil, got %v", got)
 	}
+
 	realErr := errors.New("boom")
 	got := FirstError([]error{rueidis.Nil, realErr})
 	if got != realErr {
-		t.Fatalf("expected first real error, got %v", got)
+		t.Fatalf("expected first real error after Nil, got %v", got)
+	}
+	got = FirstError([]error{realErr, rueidis.Nil})
+	if got != realErr {
+		t.Fatalf("expected first real error before Nil, got %v", got)
 	}
 }

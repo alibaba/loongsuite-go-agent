@@ -79,7 +79,13 @@ func BuildGoRedisOtelInstrumenter() instrumenter.Instrumenter[goRedisRequest, an
 		BuildInstrumenter()
 }
 
-// getRedisV9Statement mirrors upstream otelc go-redis v9 hook.go.
+// getRedisV9Statement builds db.query.text.
+//
+// Unlike upstream otelc (which appends cmd.Name()), this keeps loongsuite's
+// historical format by appending *redis.Cmd via its Stringer (command + reply).
+// Explicit err.Error() text is skipped for redis.Nil to avoid duplicating the
+// sentinel already present in cmd.String(); the statement may still contain
+// "redis: nil" via that Stringer.
 func getRedisV9Statement(cmd redis.Cmder) string {
 	b := make([]byte, 0, 64)
 

@@ -12,14 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package rueidisnil holds redis-nil filtering helpers for rueidis instrumentation.
+//
+// These live in a separate package because pkg/rules/rueidisgo cannot be unit-tested
+// directly: it references rueidis.RedisAdders, which is only defined via bytecode
+// injection at instrument time.
 package rueidisnil
 
-import "github.com/redis/rueidis"
+import (
+	"errors"
+
+	"github.com/redis/rueidis"
+)
 
 // SpanEndErr returns the error to pass to Instrumenter.End.
 // rueidis nil replies must not mark the span as Error.
+// Uses errors.Is (not rueidis.IsRedisNil) so %w-wrapped Nil is filtered too,
+// matching go-redis redisSpanEndErr.
 func SpanEndErr(err error) error {
-	if err != nil && !rueidis.IsRedisNil(err) {
+	if err != nil && !errors.Is(err, rueidis.Nil) {
 		return err
 	}
 	return nil
