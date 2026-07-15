@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/alibaba/loongsuite-go/test/verifier"
-	"github.com/redis/rueidis"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/trace"
 	"log"
 	"os"
 	"time"
+
+	"github.com/alibaba/loongsuite-go/test/verifier"
+	"github.com/redis/rueidis"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func main() {
@@ -113,7 +115,43 @@ func main() {
 		}
 	}
 
-	// === 4. 基本的键操作测试 ===
+	// === 4. Redis nil replies should not mark spans as errors ===
+	missingResp := client.Do(ctx, client.B().Get().Key("missing:rueidis:nil").Build())
+	if !rueidis.IsRedisNil(missingResp.Error()) {
+		log.Fatal("expected rueidis nil for missing key:", missingResp.Error())
+	}
+
+	mixedResponses := client.DoMulti(
+		ctx,
+		client.B().Get().Key("missing:rueidis:nil-in-multi").Build(),
+		client.B().Incr().Key(key).Build(),
+	)
+	if len(mixedResponses) != 2 {
+		log.Fatalf("expected 2 mixed responses, got %d", len(mixedResponses))
+	}
+	if !rueidis.IsRedisNil(mixedResponses[0].Error()) {
+		log.Fatal("expected first mixed response to be rueidis nil:", mixedResponses[0].Error())
+	}
+	if mixedResponses[1].Error() == nil {
+		log.Fatal("expected second mixed response to be a real Redis error")
+	}
+
+	mixedCacheResponses := client.DoMultiCache(
+		ctx,
+		rueidis.CT(client.B().Get().Key("missing:rueidis:nil-in-multi-cache").Cache(), time.Minute),
+		rueidis.CT(client.B().Hget().Key(key).Field("field").Cache(), time.Minute),
+	)
+	if len(mixedCacheResponses) != 2 {
+		log.Fatalf("expected 2 mixed cache responses, got %d", len(mixedCacheResponses))
+	}
+	if !rueidis.IsRedisNil(mixedCacheResponses[0].Error()) {
+		log.Fatal("expected first mixed cache response to be rueidis nil:", mixedCacheResponses[0].Error())
+	}
+	if mixedCacheResponses[1].Error() == nil {
+		log.Fatal("expected second mixed cache response to be a real Redis error")
+	}
+
+	// === 5. 基本的键操作测试 ===
 	fmt.Println("\n🔑 测试基本键操作...")
 
 	// 设置过期时间
@@ -157,7 +195,7 @@ func main() {
 	time.Sleep(2 * time.Second)
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		traceNum := len(stubs)
-		verifier.Assert(traceNum == 10, "Expected 10 trace num, got %d", traceNum)
+		verifier.Assert(traceNum == 13, "Expected 13 trace num, got %d", traceNum)
 		pingSpan := stubs[0][0]
 		verifier.Assert(pingSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", pingSpan.SpanKind)
 		verifier.Assert(pingSpan.Name == "PING", "Except server span name to be ping, got %s", pingSpan.Name)
@@ -176,10 +214,22 @@ func main() {
 		mutilSpan := stubs[5][0]
 		verifier.Assert(mutilSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", mutilSpan.SpanKind)
 		verifier.Assert(mutilSpan.Name == "GET INCR EXISTS", "Except server span name to be GET INCR EXISTS, got %s", mutilSpan.Name)
-		setSpan2 := stubs[6][0]
+		nilGetSpan := stubs[6][0]
+		verifier.Assert(nilGetSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", nilGetSpan.SpanKind)
+		verifier.Assert(nilGetSpan.Name == "GET", "Except server span name to be GET, got %s", nilGetSpan.Name)
+		verifier.Assert(nilGetSpan.Status.Code == codes.Unset, "Redis nil span should be Unset, got %v", nilGetSpan.Status.Code)
+		mixedMultiSpan := stubs[7][0]
+		verifier.Assert(mixedMultiSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", mixedMultiSpan.SpanKind)
+		verifier.Assert(mixedMultiSpan.Name == "GET INCR", "Except server span name to be GET INCR, got %s", mixedMultiSpan.Name)
+		verifier.Assert(mixedMultiSpan.Status.Code == codes.Error, "Mixed nil and real error span should be Error, got %v", mixedMultiSpan.Status.Code)
+		mixedCacheSpan := stubs[8][0]
+		verifier.Assert(mixedCacheSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", mixedCacheSpan.SpanKind)
+		verifier.Assert(mixedCacheSpan.Name == "GET HGET", "Except server span name to be GET HGET, got %s", mixedCacheSpan.Name)
+		verifier.Assert(mixedCacheSpan.Status.Code == codes.Error, "Mixed cache nil and real error span should be Error, got %v", mixedCacheSpan.Status.Code)
+		setSpan2 := stubs[9][0]
 		verifier.Assert(setSpan2.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", setSpan2.SpanKind)
 		verifier.Assert(setSpan2.Name == "SET", "Except server span name to be set, got %s", setSpan2.Name)
-		pubSpan := stubs[8][0]
+		pubSpan := stubs[11][0]
 		verifier.Assert(pubSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", pubSpan.SpanKind)
 		verifier.Assert(pubSpan.Name == "PUBLISH", "Except server span name to be PUBLISH, got %s", pubSpan.Name)
 	}, 1)

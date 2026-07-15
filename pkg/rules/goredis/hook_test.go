@@ -51,6 +51,18 @@ func TestRedisSpanEndErr(t *testing.T) {
 	assert.Equal(t, realErr, redisSpanEndErr(realErr))
 }
 
+func TestRedisPipelineSpanEndErr(t *testing.T) {
+	nilCmd := redis.NewCmd(context.Background(), "get", "missing")
+	nilCmd.SetErr(redis.Nil)
+	failCmd := redis.NewCmd(context.Background(), "incr", "string-key")
+	realErr := errors.New("ERR value is not an integer or out of range")
+	failCmd.SetErr(realErr)
+
+	assert.Nil(t, redisPipelineSpanEndErr([]redis.Cmder{nilCmd}, redis.Nil))
+	assert.Equal(t, realErr, redisPipelineSpanEndErr([]redis.Cmder{nilCmd, failCmd}, redis.Nil))
+	assert.Equal(t, realErr, redisPipelineSpanEndErr(nil, realErr))
+}
+
 func TestGetRedisV9Statement(t *testing.T) {
 	cmd := redis.NewCmd(context.Background(), "get", "mykey")
 	assert.Equal(t, "get mykey: get mykey", getRedisV9Statement(cmd))
@@ -141,6 +153,29 @@ func TestProcessPipelineHook_RecordsError(t *testing.T) {
 	}
 	err := pipelineHook(context.Background(), cmds)
 	assert.Equal(t, expectedErr, err)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, codes.Error, spans[0].Status().Code)
+}
+
+func TestProcessPipelineHook_MixedRedisNilAndErrorRecordsError(t *testing.T) {
+	sr := setupTestTracer(t)
+
+	hook := newOtRedisHook("localhost:6379")
+	expectedErr := errors.New("ERR value is not an integer or out of range")
+	pipelineHook := hook.ProcessPipelineHook(func(ctx context.Context, cmds []redis.Cmder) error {
+		cmds[0].SetErr(redis.Nil)
+		cmds[1].SetErr(expectedErr)
+		return redis.Nil
+	})
+
+	cmds := []redis.Cmder{
+		redis.NewCmd(context.Background(), "get", "missing"),
+		redis.NewCmd(context.Background(), "incr", "string-key"),
+	}
+	err := pipelineHook(context.Background(), cmds)
+	assert.ErrorIs(t, err, redis.Nil)
 
 	spans := sr.Ended()
 	require.Len(t, spans, 1)

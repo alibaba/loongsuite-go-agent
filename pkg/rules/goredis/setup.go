@@ -151,7 +151,7 @@ func (o *otRedisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.
 		}
 		ctx = goRedisInstrumenter.Start(ctx, request)
 		err := next(ctx, cmds)
-		goRedisInstrumenter.End(ctx, request, nil, redisSpanEndErr(err))
+		goRedisInstrumenter.End(ctx, request, nil, redisPipelineSpanEndErr(cmds, err))
 		return err
 	}
 }

@@ -35,3 +35,12 @@ func redisSpanEndErr(err error) error {
 	}
 	return nil
 }
+
+func redisPipelineSpanEndErr(cmds []redis.Cmder, err error) error {
+	for _, cmd := range cmds {
+		if spanErr := redisSpanEndErr(cmd.Err()); spanErr != nil {
+			return spanErr
+		}
+	}
+	return redisSpanEndErr(err)
+}
