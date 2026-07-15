@@ -68,5 +68,6 @@ func BuildGoRueidisOtelInstrumenter() instrumenter.Instrumenter[*goRueidisReques
 	getter := goRueidisAttrsGetter{}
 	return builder.Init().SetSpanNameExtractor(&db.DBSpanNameExtractor[*goRueidisRequest]{Getter: getter}).SetSpanKindExtractor(&instrumenter.AlwaysClientExtractor[*goRueidisRequest]{}).
 		AddAttributesExtractor(&db.DbClientAttrsExtractor[*goRueidisRequest, any, db.DbClientAttrsGetter[*goRueidisRequest]]{Base: db.DbClientCommonAttrsExtractor[*goRueidisRequest, any, db.DbClientAttrsGetter[*goRueidisRequest]]{Getter: getter}}).
+		AddOperationListeners(db.DbClientMetrics("nosql.rueidis")).
 		BuildInstrumenter()
 }

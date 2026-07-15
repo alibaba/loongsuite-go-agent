@@ -16,12 +16,14 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/alibaba/loongsuite-go/test/verifier"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"log"
-	"os"
 )
 
 var con driver.Conn
@@ -141,4 +143,31 @@ func main() {
 		verifier.VerifyDbAttributes(stubs[6][0], "SERVER_VERSION", "clickhouse", addr, "SERVER_VERSION", "SERVER_VERSION", "", nil)
 		verifier.VerifyDbAttributes(stubs[7][0], "PING", "clickhouse", addr, "PING", "PING", "", nil)
 	}, 1)
+	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if len(point.DataPoints) <= 0 {
+				panic("db.client.request.duration has no datapoints")
+			}
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "clickhouse" &&
+					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "EXEC" &&
+					verifier.GetAttribute(attrs, "server.address").AsString() == addr {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing EXEC datapoint for clickhouse")
+			}
+		},
+	})
 }

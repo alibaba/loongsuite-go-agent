@@ -108,8 +108,15 @@ func (h DbClientMetric) OnAfterStart(context context.Context, endTime time.Time)
 	return
 }
 
-func (h DbClientMetric) OnAfterEnd(context context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
-	mc := context.Value(h.key).(dbMetricContext)
+func (h DbClientMetric) OnAfterEnd(ctx context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
+	v := ctx.Value(h.key)
+	if v == nil {
+		return
+	}
+	mc, ok := v.(dbMetricContext)
+	if !ok {
+		return
+	}
 	startTime, startAttributes := mc.startTime, mc.startAttributes
 	// end attributes should be shadowed by AttrsShadower
 	if h.clientRequestDuration == nil {
@@ -123,6 +130,6 @@ func (h DbClientMetric) OnAfterEnd(context context.Context, endAttributes []attr
 	endAttributes = append(endAttributes, startAttributes...)
 	n, metricsAttrs := utils.Shadow(endAttributes, dbMetricsConv)
 	if h.clientRequestDuration != nil {
-		h.clientRequestDuration.Record(context, float64(endTime.Sub(startTime).Milliseconds()), metric.WithAttributeSet(attribute.NewSet(metricsAttrs[0:n]...)))
+		h.clientRequestDuration.Record(ctx, float64(endTime.Sub(startTime).Milliseconds()), metric.WithAttributeSet(attribute.NewSet(metricsAttrs[0:n]...)))
 	}
 }

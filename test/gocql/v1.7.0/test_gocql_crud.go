@@ -15,11 +15,13 @@
 package main
 
 import (
-	"github.com/alibaba/loongsuite-go/test/verifier"
-	"github.com/gocql/gocql"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"log"
 	"os"
+
+	"github.com/alibaba/loongsuite-go/test/verifier"
+	"github.com/gocql/gocql"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 var session *gocql.Session
@@ -101,4 +103,31 @@ func main() {
 		verifier.VerifyDbAttributes(stubs[6][0], "DROP TABLE", "cassandra", host, "DROP table IF EXISTS cassandra.shopping_cart;", "DROP TABLE", "", nil)
 		verifier.VerifyDbAttributes(stubs[7][0], "DROP KEYSPACE", "cassandra", host, "DROP KEYSPACE IF EXISTS cassandra;", "DROP KEYSPACE", "", nil)
 	}, 1)
+	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if len(point.DataPoints) <= 0 {
+				panic("db.client.request.duration has no datapoints")
+			}
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "cassandra" &&
+					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "SELECT" &&
+					verifier.GetAttribute(attrs, "server.address").AsString() == host {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing SELECT datapoint for cassandra")
+			}
+		},
+	})
 }

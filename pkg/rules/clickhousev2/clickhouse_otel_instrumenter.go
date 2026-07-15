@@ -62,6 +62,7 @@ func BuildClickhouseInstrumenter() instrumenter.Instrumenter[clickhouseRequest, 
 	getter := clickhouseAttrsGetter{}
 	return builder.Init().SetSpanNameExtractor(&db.DBSpanNameExtractor[clickhouseRequest]{Getter: getter}).SetSpanKindExtractor(&instrumenter.AlwaysClientExtractor[clickhouseRequest]{}).
 		AddAttributesExtractor(&db.DbClientAttrsExtractor[clickhouseRequest, any, clickhouseAttrsGetter]{Base: db.DbClientCommonAttrsExtractor[clickhouseRequest, any, clickhouseAttrsGetter]{Getter: getter}}).
+		AddOperationListeners(db.DbClientMetrics("database.clickhouse")).
 		SetInstrumentationScope(instrumentation.Scope{
 			Name:    utils.CLICKHOUSE_V2_SCOPE_NAME,
 			Version: version.Tag,

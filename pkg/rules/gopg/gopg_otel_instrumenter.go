@@ -62,6 +62,7 @@ func BuildGopgInstrumenter() instrumenter.Instrumenter[gopgRequest, interface{}]
 	getter := gogpAttrsGetter{}
 	return builder.Init().SetSpanNameExtractor(&db.DBSpanNameExtractor[gopgRequest]{Getter: getter}).SetSpanKindExtractor(&instrumenter.AlwaysClientExtractor[gopgRequest]{}).
 		AddAttributesExtractor(&db.DbClientAttrsExtractor[gopgRequest, any, gogpAttrsGetter]{Base: db.DbClientCommonAttrsExtractor[gopgRequest, any, gogpAttrsGetter]{Getter: getter}}).
+		AddOperationListeners(db.DbClientMetrics("database.gopg")).
 		SetInstrumentationScope(instrumentation.Scope{
 			Name:    utils.GOPG_SCOPE_NAME,
 			Version: version.Tag,

@@ -3,19 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/alibaba/loongsuite-go/test/verifier"
-	"github.com/redis/rueidis"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/trace"
 	"log"
 	"os"
 	"time"
+
+	"github.com/alibaba/loongsuite-go/test/verifier"
+	"github.com/redis/rueidis"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func main() {
+	redisAddr := "localhost:" + os.Getenv("REDIS_PORT")
 	// 创建 rueidis 客户端
 	client, err := rueidis.NewClient(rueidis.ClientOption{
-		InitAddress: []string{"localhost:" + os.Getenv("REDIS_PORT")}, // Redis 地址
+		InitAddress: []string{redisAddr}, // Redis 地址
 		// Username:  "default",                    // 可选：用户名
 		Password: "", // no password set
 		// SelectDB:  0,                            // 可选：选择 DB
@@ -183,4 +186,31 @@ func main() {
 		verifier.Assert(pubSpan.SpanKind == trace.SpanKindClient, "Expect to be client span, got %d", pubSpan.SpanKind)
 		verifier.Assert(pubSpan.Name == "PUBLISH", "Except server span name to be PUBLISH, got %s", pubSpan.Name)
 	}, 1)
+	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if len(point.DataPoints) <= 0 {
+				panic("db.client.request.duration has no datapoints")
+			}
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "rueidis" &&
+					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "PING" &&
+					verifier.GetAttribute(attrs, "server.address").AsString() == redisAddr {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing PING datapoint for rueidis")
+			}
+		},
+	})
 }

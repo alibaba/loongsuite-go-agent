@@ -52,6 +52,20 @@ func main() {
 	}
 
 	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if point.DataPoints[0].Count <= 0 {
+				panic("db.client.request.duration metrics count is not positive, actually " + strconv.Itoa(int(point.DataPoints[0].Count)))
+			}
+			attrs := point.DataPoints[0].Attributes.ToSlice()
+			if verifier.GetAttribute(attrs, "db.system.name").AsString() != "elasticsearch" {
+				panic("expected db.system.name=elasticsearch")
+			}
+		},
+		// net/http client instrumentation still records transport-level latency.
 		"http.client.request.duration": func(mrs metricdata.ResourceMetrics) {
 			if len(mrs.ScopeMetrics) <= 0 {
 				panic("No http.client.request.duration metrics received!")
