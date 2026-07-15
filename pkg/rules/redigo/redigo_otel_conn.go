@@ -82,7 +82,7 @@ func (a *armsConn) Do(commandName string, args ...interface{}) (reply interface{
 		}
 		req.cmd = "EXEC"
 		req.args = []interface{}{string_builder.String()}
-		redigoInstrumenter.StartAndEnd(ctx, req, nil, err, startTime, endTime)
+		redigoInstrumenter.StartAndEnd(ctx, req, nil, redigoSpanEndErr(err), startTime, endTime)
 		transactionQueue.Init() // purge the transaction queue after EXEC
 	case "discard":
 		// Purge the transaction queue
@@ -93,7 +93,7 @@ func (a *armsConn) Do(commandName string, args ...interface{}) (reply interface{
 			push(req, transactionQueue)
 			return
 		}
-		redigoInstrumenter.StartAndEnd(ctx, req, nil, err, startTime, endTime)
+		redigoInstrumenter.StartAndEnd(ctx, req, nil, redigoSpanEndErr(err), startTime, endTime)
 	}
 	return
 }
@@ -138,7 +138,7 @@ func (a *armsConn) Receive() (reply interface{}, err error) {
 	req := pop(commandQueue)
 	if req != nil {
 		now := time.Now()
-		redigoInstrumenter.StartAndEnd(req.ctx, req, nil, err, req.startTime, now)
+		redigoInstrumenter.StartAndEnd(req.ctx, req, nil, redigoSpanEndErr(err), req.startTime, now)
 	}
 	return
 }
