@@ -23,12 +23,23 @@ import (
 
 type customDBError struct{}
 
-func (customDBError) Error() string           { return "custom" }
-func (customDBError) ErrorType() string       { return "db.custom" }
+func (customDBError) Error() string     { return "custom" }
+func (customDBError) ErrorType() string { return "db.custom" }
+
+type typedNilDBError struct {
+	kind string
+}
+
+func (e *typedNilDBError) Error() string     { return e.kind }
+func (e *typedNilDBError) ErrorType() string { return e.kind }
 
 func TestNormalizeDBClientErrorType(t *testing.T) {
 	if got := NormalizeDBClientErrorType(nil); got != "" {
 		t.Fatalf("nil err should return empty, got %q", got)
+	}
+	var typedNil error = (*typedNilDBError)(nil)
+	if got := NormalizeDBClientErrorType(typedNil); got != "" {
+		t.Fatalf("typed nil should return empty, got %q", got)
 	}
 	if got := NormalizeDBClientErrorType(errors.New("x")); got != "*errors.errorString" {
 		t.Fatalf("unexpected error.type %q", got)
@@ -44,5 +55,13 @@ func TestNormalizeDBClientErrorType(t *testing.T) {
 	}
 	if got := NormalizeDBClientErrorType(customDBError{}); got != "db.custom" {
 		t.Fatalf("ErrorType() interface should take precedence, got %q", got)
+	}
+}
+
+func TestNormalizeDBClientErrorTypeDoubleWrapped(t *testing.T) {
+	base := customDBError{}
+	wrapped := fmt.Errorf("app: %w", fmt.Errorf("db: %w", base))
+	if got := NormalizeDBClientErrorType(wrapped); got != "db.custom" {
+		t.Fatalf("expected db.custom after unwrap, got %q", got)
 	}
 }

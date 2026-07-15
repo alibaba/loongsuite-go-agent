@@ -15,37 +15,11 @@
 package http
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
-)
 
-func unwrapFmtWrapped(err error) error {
-	for err != nil {
-		t := reflect.TypeOf(err)
-		if t == nil {
-			break
-		}
-		name := t.String()
-		if name == "*fmt.wrapError" {
-			err = errors.Unwrap(err)
-		} else if name == "*errors.joinError" {
-			if je, ok := err.(interface{ Unwrap() []error }); ok {
-				errs := je.Unwrap()
-				if len(errs) > 0 {
-					err = errs[0]
-				} else {
-					break
-				}
-			} else {
-				break
-			}
-		} else {
-			break
-		}
-	}
-	return err
-}
+	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/utils"
+)
 
 // NormalizeHTTPClientErrorType follows the upstream HTTPClientErrorType behavior
 // and uses the concrete Go error type as the error.type value.
@@ -62,7 +36,7 @@ func NormalizeHTTPClientErrorType(err error) string {
 	}
 
 	// 2. 解包 fmt.Errorf("%w") 和 errors.Join 产生的标准库包装类，获取底层具体错误
-	err = unwrapFmtWrapped(err)
+	err = utils.UnwrapFmtWrapped(err)
 	if err == nil {
 		return ""
 	}
