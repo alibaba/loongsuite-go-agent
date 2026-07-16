@@ -204,6 +204,17 @@ through any future `v1.x` release without churn.
   the agent / workflow / tool spans are emitted with the expected
   attributes and parented under the LoongSuite tracer.
 - `make build` — instrumentation tool builds with the new rule.
+- Single-otel-version check: the otel tool's preprocessor adds
+  `replace go.opentelemetry.io/otel* => ... v1.40.0` directives to the
+  woven module's `go.mod` (see `tool/preprocess/update.go::otelDeps`),
+  so the final binary resolves every otel sub-module to exactly one
+  version — `v1.40.0` — regardless of the plugin's `v1.44.0` pin. After
+  weaving, `go list -m go.opentelemetry.io/otel` from the woven module
+  prints `go.opentelemetry.io/otel v1.40.0`, and
+  `go list -m all | grep '^go.opentelemetry.io/otel '` returns exactly
+  one line. The plugin only uses stable otel v1.x symbols
+  (`attribute.KeyValue`, `instrumentation.Scope`), so v1.40 satisfies
+  both the plugin and `pkg` — no link-time type mismatch.
 
 ## Test app
 
@@ -237,13 +248,38 @@ enabled), matching the convention used by `trpc-agent-go` and `adk-go`.
 
 ## Open risks
 
-- The upstream module currently requires Go 1.25 (per its `go.mod`) and
-  `otel v1.44`. The plugin module pins to `go 1.24` and `otel v1.40`
-  (consistent with the rest of `pkg/rules/*`). The hook surface is purely
-  the framework's exported types — `*agent.Agent`, `*inproc.ExecutionEnvironment`,
-  `*functool.funcTool` — and the linked hook functions use `interface{}`
-  receivers and `context.Context` parameters only, so a Go 1.24 plugin
-  module can compile against a Go 1.25 framework module without issue.
-- If the upstream renames `funcTool` to something else, the tool rule
-  will silently no-op (muzzle test catches this). The agent and workflow
-  hooks are on exported types and far less likely to move.
+- **Version baseline divergence.** The upstream module
+  (`microsoft/agent-framework-go`, verified 2026-07-16) declares
+  `go 1.25.0` and `go.opentelemetry.io/otel v1.44.0` in its `go.mod`, and
+  its API surface (e.g. `iter.Seq2`-returning `Agent.Run`) requires the
+  Go 1.23+ iterator support, so this plugin module must declare
+  `go 1.25.0` and pin `otel v1.44.0` to compile against upstream at all.
+  This diverges from the rest of `pkg/rules/*` (e.g. `trpc-agent-go`,
+  `adk-go`), which sit on `go 1.24 / otel v1.40`.
+- **Single-otel-version guarantee.** Although the plugin module's
+  `go.mod` requires `otel v1.44`, the otel tool's preprocessor
+  (`tool/preprocess/update.go::otelDeps`) rewrites every
+  `go.opentelemetry.io/otel*` dependency — across the user module *and*
+  every imported rule module — to `v1.40.0` via `replace` directives
+  before the woven build runs. MVS therefore resolves a single otel
+  version (`v1.40.0`) in the final binary, regardless of the
+  version pins in any plugin's `go.mod`. The plugin only references
+  stable otel v1.x symbols (`attribute.KeyValue`,
+  `instrumentation.Scope`) that are present in both `v1.40` and `v1.44`,
+  so the rewrite is source-compatible and there is no link-time type
+  mismatch. Empirical verification is recorded in the Verification
+  section below.
+- **`funcTool` rename risk.** `*functool.funcTool` is an *unexported*
+  type. If upstream renames it, the tool rule silently no-ops. The
+  muzzle test only verifies the instrumentation compiles; it does
+  **not** assert that the hook actually fires, and `LatestDepth` is
+  pinned to `v0.0.0`, so neither test catches an upstream rename. This
+  is an accepted limitation — the agent and workflow hooks anchor on
+  exported types and are far less likely to move.
+- **Streaming duration.** `(*Agent).Run` returns an `iter.Seq2`
+  iterator; the `invoke_agent` span is closed in `agentRunOnExit`,
+  which fires as soon as `Run` returns the iterator to the caller —
+  *before* the caller drains the stream. The span duration therefore
+  measures the setup phase, not the full streaming consumption. This
+  mirrors the `trpc-agent-go` `<-chan` precedent and is an accepted
+  limitation.

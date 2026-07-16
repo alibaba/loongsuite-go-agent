@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"log"
@@ -23,6 +24,8 @@ import (
 
 	"github.com/alibaba/loongsuite-go/test/verifier"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -76,6 +79,27 @@ func newEchoTool() tool.FuncTool {
 		},
 		functool.HandlerFor[echoArgs, string](func(_ context.Context, args echoArgs) (string, error) {
 			return args.Text, nil
+		}),
+	)
+	if err != nil {
+		log.Fatalf("functool.New: %v", err)
+	}
+	return t
+}
+
+var errIntentional = errors.New("intentional failure")
+
+// newFailingTool returns a function-tool whose handler always errors, used to
+// exercise the error path of the execute_tool span: err != nil must produce
+// gen_ai.error.type and set span status to Error.
+func newFailingTool() tool.FuncTool {
+	t, err := functool.New[echoArgs, string](
+		functool.Config{
+			Name:        "fail",
+			Description: "Always returns an error.",
+		},
+		functool.HandlerFor[echoArgs, string](func(_ context.Context, _ echoArgs) (string, error) {
+			return "", errIntentional
 		}),
 	)
 	if err != nil {
@@ -142,6 +166,12 @@ func main() {
 		log.Fatalf("funcTool.Call: %v", err)
 	}
 
+	// --- Scenario 2b: error path — execute_tool span with err != nil. ---
+	fail := newFailingTool()
+	if _, err := fail.Call(ctx, `{"Text":"boom"}`); err == nil {
+		log.Fatalf("expected failing tool to return an error")
+	}
+
 	// --- Scenario 3: (*ExecutionEnvironment).Run drives the workflow span. ---
 	wf, err := workflow.NewBuilder(newNoOpBinding("start")).Build()
 	if err != nil {
@@ -156,7 +186,8 @@ func main() {
 
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		foundAgent := false
-		foundTool := false
+		foundEchoTool := false
+		foundFailingTool := false
 		foundWorkflow := false
 
 		for _, spans := range stubs {
@@ -182,23 +213,40 @@ func main() {
 						"Expected client span kind, got %d", span.SpanKind)
 
 				case "execute_tool":
-					foundTool = true
 					verifier.Assert(span.Name == "execute_tool",
 						"Expected span name execute_tool, got %s", span.Name)
 					spanKind := verifier.GetAttribute(span.Attributes, "gen_ai.span.kind").AsString()
 					verifier.Assert(spanKind == "tool",
 						"Expected gen_ai.span.kind=tool, got %s", spanKind)
-					toolName := verifier.GetAttribute(span.Attributes, "gen_ai.tool.name").AsString()
-					verifier.Assert(toolName == "echo",
-						"Expected gen_ai.tool.name=echo, got %s", toolName)
-					toolInput := verifier.GetAttribute(span.Attributes, "gen_ai.tool.input").AsString()
-					verifier.Assert(toolInput == `{"Text":"hi"}`,
-						"Expected gen_ai.tool.input={\"Text\":\"hi\"}, got %s", toolInput)
-					toolOutput := verifier.GetAttribute(span.Attributes, "gen_ai.tool.output").AsString()
-					verifier.Assert(toolOutput == "hi",
-						"Expected gen_ai.tool.output=hi, got %s", toolOutput)
 					verifier.Assert(span.SpanKind == oteltrace.SpanKindClient,
 						"Expected client span kind, got %d", span.SpanKind)
+					toolName := verifier.GetAttribute(span.Attributes, "gen_ai.tool.name").AsString()
+					toolInput := verifier.GetAttribute(span.Attributes, "gen_ai.tool.input").AsString()
+
+					switch toolName {
+					case "echo":
+						foundEchoTool = true
+						verifier.Assert(toolInput == `{"Text":"hi"}`,
+							"Expected gen_ai.tool.input={\"Text\":\"hi\"}, got %s", toolInput)
+						toolOutput := verifier.GetAttribute(span.Attributes, "gen_ai.tool.output").AsString()
+						verifier.Assert(toolOutput == "hi",
+							"Expected gen_ai.tool.output=hi, got %s", toolOutput)
+						errType := verifier.GetAttribute(span.Attributes, "error.type")
+						verifier.Assert(errType.Type() == attribute.INVALID,
+							"Expected no error.type on success path, got %v", errType)
+						verifier.Assert(span.Status.Code == codes.Unset,
+							"Expected unset span status on success, got %v", span.Status.Code)
+
+					case "fail":
+						foundFailingTool = true
+						verifier.Assert(toolInput == `{"Text":"boom"}`,
+							"Expected gen_ai.tool.input={\"Text\":\"boom\"}, got %s", toolInput)
+						errType := verifier.GetAttribute(span.Attributes, "error.type").AsString()
+						verifier.Assert(errType == errIntentional.Error(),
+							"Expected error.type=%q, got %q", errIntentional.Error(), errType)
+						verifier.Assert(span.Status.Code == codes.Error,
+							"Expected Error span status, got %v", span.Status.Code)
+					}
 
 				case "run_workflow":
 					foundWorkflow = true
@@ -214,7 +262,8 @@ func main() {
 		}
 
 		verifier.Assert(foundAgent, "Expected invoke_agent workflow span")
-		verifier.Assert(foundTool, "Expected execute_tool span")
+		verifier.Assert(foundEchoTool, "Expected execute_tool success span (echo)")
+		verifier.Assert(foundFailingTool, "Expected execute_tool error span (fail)")
 		verifier.Assert(foundWorkflow, "Expected run_workflow span")
 	}, 1)
 
