@@ -1,0 +1,26 @@
+[
+  {
+    "ImportPath": "github.com/microsoft/agent-framework-go/agent",
+    "Function": "Run",
+    "ReceiverType": "\\*Agent",
+    "OnEnter": "agentRunOnEnter",
+    "OnExit": "agentRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/ms-agent-framework-go"
+  },
+  {
+    "ImportPath": "github.com/microsoft/agent-framework-go/workflow/inproc",
+    "Function": "Run",
+    "ReceiverType": "\\*ExecutionEnvironment",
+    "OnEnter": "executionEnvRunOnEnter",
+    "OnExit": "executionEnvRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/ms-agent-framework-go"
+  },
+  {
+    "ImportPath": "github.com/microsoft/agent-framework-go/tool/functool",
+    "Function": "Call",
+    "ReceiverType": "\\*funcTool",
+    "OnEnter": "funcToolCallOnEnter",
+    "OnExit": "funcToolCallOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/ms-agent-framework-go"
+  }
+]
