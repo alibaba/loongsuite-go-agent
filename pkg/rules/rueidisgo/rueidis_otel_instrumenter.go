@@ -24,7 +24,7 @@ type goRueidisAttrsGetter struct {
 }
 
 func (d goRueidisAttrsGetter) GetSystem(request *goRueidisRequest) string {
-	return "rueidis"
+	return "redis"
 }
 
 func (d goRueidisAttrsGetter) GetServerAddress(request *goRueidisRequest) string {

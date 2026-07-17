@@ -201,7 +201,7 @@ func main() {
 					continue
 				}
 				attrs := dp.Attributes.ToSlice()
-				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "rueidis" &&
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "redis" &&
 					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "PING" &&
 					verifier.GetAttribute(attrs, "server.address").AsString() == redisAddr {
 					found = true

@@ -58,12 +58,22 @@ func main() {
 				panic("No db.client.request.duration metrics received!")
 			}
 			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
-			if point.DataPoints[0].Count <= 0 {
-				panic("db.client.request.duration metrics count is not positive, actually " + strconv.Itoa(int(point.DataPoints[0].Count)))
+			if len(point.DataPoints) == 0 {
+				panic("db.client.request.duration has no datapoints")
 			}
-			attrs := point.DataPoints[0].Attributes.ToSlice()
-			if verifier.GetAttribute(attrs, "db.system.name").AsString() != "elasticsearch" {
-				panic("expected db.system.name=elasticsearch")
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "elasticsearch" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing elasticsearch datapoint")
 			}
 		},
 		// net/http client instrumentation still records transport-level latency.

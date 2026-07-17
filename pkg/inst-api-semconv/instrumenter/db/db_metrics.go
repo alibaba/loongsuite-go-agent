@@ -93,28 +93,30 @@ type dbMetricContext struct {
 	startAttributes []attribute.KeyValue
 }
 
-func (h DbClientMetric) OnBeforeStart(parentContext context.Context, startTime time.Time) context.Context {
+func (h *DbClientMetric) OnBeforeStart(parentContext context.Context, startTime time.Time) context.Context {
 	return parentContext
 }
 
-func (h DbClientMetric) OnBeforeEnd(ctx context.Context, startAttributes []attribute.KeyValue, startTime time.Time) context.Context {
+func (h *DbClientMetric) OnBeforeEnd(ctx context.Context, startAttributes []attribute.KeyValue, startTime time.Time) context.Context {
 	return context.WithValue(ctx, h.key, dbMetricContext{
 		startTime:       startTime,
 		startAttributes: startAttributes,
 	})
 }
 
-func (h DbClientMetric) OnAfterStart(context context.Context, endTime time.Time) {
+func (h *DbClientMetric) OnAfterStart(context context.Context, endTime time.Time) {
 	return
 }
 
-func (h DbClientMetric) OnAfterEnd(ctx context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
+func (h *DbClientMetric) OnAfterEnd(ctx context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
 	v := ctx.Value(h.key)
 	if v == nil {
+		log.Printf("DbClientMetric.OnAfterEnd: missing metric context for key %q; skipping record", h.key)
 		return
 	}
 	mc, ok := v.(dbMetricContext)
 	if !ok {
+		log.Printf("DbClientMetric.OnAfterEnd: invalid metric context type for key %q; skipping record", h.key)
 		return
 	}
 	startTime, startAttributes := mc.startTime, mc.startAttributes
