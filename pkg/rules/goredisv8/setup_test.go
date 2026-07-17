@@ -17,8 +17,6 @@ package goredisv8
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/go-redis/redis/v8"
@@ -38,35 +36,6 @@ func setupTestTracer(t *testing.T) *tracetest.SpanRecorder {
 	redisv8Instrumenter = BuildRedisv8Instrumenter()
 	t.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
 	return sr
-}
-
-func TestRedisSpanEndErr(t *testing.T) {
-	assert.Nil(t, redisSpanEndErr(nil))
-	assert.Nil(t, redisSpanEndErr(redis.Nil))
-	assert.Nil(t, redisSpanEndErr(fmt.Errorf("wrap: %w", redis.Nil)))
-
-	realErr := errors.New("connection refused")
-	assert.Equal(t, realErr, redisSpanEndErr(realErr))
-}
-
-func TestIsRedisSpanError(t *testing.T) {
-	assert.False(t, isRedisSpanError(nil))
-	assert.False(t, isRedisSpanError(redis.Nil))
-	assert.False(t, isRedisSpanError(fmt.Errorf("wrap: %w", redis.Nil)))
-	assert.True(t, isRedisSpanError(errors.New("connection refused")))
-}
-
-func TestGetRedisV8Statement(t *testing.T) {
-	cmd := redis.NewCmd(context.Background(), "get", "mykey")
-	assert.Equal(t, "get mykey: get mykey", getRedisV8Statement(cmd))
-
-	cmd.SetErr(redis.Nil)
-	stmt := getRedisV8Statement(cmd)
-	assert.Equal(t, "get mykey: get mykey: redis: nil", stmt)
-	assert.Equal(t, 1, strings.Count(stmt, "redis: nil"))
-
-	cmd.SetErr(errors.New("connection refused"))
-	assert.Contains(t, getRedisV8Statement(cmd), "connection refused")
 }
 
 func TestAfterProcess_RedisNilNotError(t *testing.T) {

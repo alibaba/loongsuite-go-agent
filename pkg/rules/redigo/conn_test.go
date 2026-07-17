@@ -17,6 +17,7 @@ package redigo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/gomodule/redigo/redis"
@@ -59,6 +60,22 @@ func setupRedigoTestTracer(t *testing.T) *tracetest.SpanRecorder {
 		_ = tp.Shutdown(context.Background())
 	})
 	return sr
+}
+
+func TestRedigoSpanEndErr(t *testing.T) {
+	if got := redigoSpanEndErr(nil); got != nil {
+		t.Fatalf("nil should stay nil, got %v", got)
+	}
+	if got := redigoSpanEndErr(redis.ErrNil); got != nil {
+		t.Fatalf("redis.ErrNil must not mark span error, got %v", got)
+	}
+	if got := redigoSpanEndErr(fmt.Errorf("wrap: %w", redis.ErrNil)); got != nil {
+		t.Fatalf("wrapped ErrNil must not mark span error, got %v", got)
+	}
+	realErr := errors.New("connection refused")
+	if got := redigoSpanEndErr(realErr); got != realErr {
+		t.Fatalf("real error must be preserved, got %v", got)
+	}
 }
 
 func TestDo_ErrNilNotSpanError(t *testing.T) {

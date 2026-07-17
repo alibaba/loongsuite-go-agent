@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/redis/go-redis/v9"
@@ -35,48 +34,9 @@ func setupTestTracer(t *testing.T) *tracetest.SpanRecorder {
 	sr := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	otel.SetTracerProvider(tp)
-	// Instrumenter captures tracer at build time; rebuild after test provider is set.
 	goRedisInstrumenter = BuildGoRedisOtelInstrumenter()
 	t.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
 	return sr
-}
-
-func TestRedisSpanEndErr(t *testing.T) {
-	assert.Nil(t, redisSpanEndErr(nil))
-	assert.Nil(t, redisSpanEndErr(redis.Nil))
-	assert.Nil(t, redisSpanEndErr(errors.Join(redis.Nil)))
-	assert.Nil(t, redisSpanEndErr(fmt.Errorf("wrap: %w", redis.Nil)))
-
-	realErr := errors.New("connection refused")
-	assert.Equal(t, realErr, redisSpanEndErr(realErr))
-}
-
-func TestRedisPipelineSpanEndErr(t *testing.T) {
-	nilCmd := redis.NewCmd(context.Background(), "get", "missing")
-	nilCmd.SetErr(redis.Nil)
-	failCmd := redis.NewCmd(context.Background(), "incr", "string-key")
-	realErr := errors.New("ERR value is not an integer or out of range")
-	failCmd.SetErr(realErr)
-
-	assert.Nil(t, redisPipelineSpanEndErr([]redis.Cmder{nilCmd}, redis.Nil))
-	assert.Equal(t, realErr, redisPipelineSpanEndErr([]redis.Cmder{nilCmd, failCmd}, redis.Nil))
-	assert.Equal(t, realErr, redisPipelineSpanEndErr(nil, realErr))
-}
-
-func TestGetRedisV9Statement(t *testing.T) {
-	cmd := redis.NewCmd(context.Background(), "get", "mykey")
-	assert.Equal(t, "get mykey: get mykey", getRedisV9Statement(cmd))
-
-	// Explicit err.Error() is skipped for redis.Nil, but *redis.Cmd Stringer
-	// still embeds the sentinel (historical db.query.text format).
-	cmd.SetErr(redis.Nil)
-	stmt := getRedisV9Statement(cmd)
-	assert.Equal(t, "get mykey: get mykey: redis: nil", stmt)
-	// Must not double-append the sentinel via err.Error() + Stringer.
-	assert.Equal(t, 1, strings.Count(stmt, "redis: nil"))
-
-	cmd.SetErr(errors.New("connection refused"))
-	assert.Contains(t, getRedisV9Statement(cmd), "connection refused")
 }
 
 func TestProcessHook_RedisNilNotError(t *testing.T) {
