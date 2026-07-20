@@ -54,3 +54,33 @@
 | v1.8.2   | v1.40.0   | v0.65.0           |
 | v1.9.0   | v1.40.0   | v0.65.0           |
 | v1.10.0  | v1.40.0   | v0.65.0           |
+
+# 遥测迁移说明
+
+以下变更会影响导出的 span 属性与指标。升级后请同步更新相关看板与告警。
+
+## rueidis：`db.system.name` 重命名为 `redis`
+
+此前 rueidis 埋点使用 `db.system.name="rueidis"`。现已改为 `db.system.name="redis"`，
+以符合 OpenTelemetry 语义约定，并与 goredis / redigo 保持一致。
+
+- **影响：** 依赖 `db.system.name="rueidis"` 过滤的时间序列与 span 查询在升级后将不再匹配。
+- **迁移：** 将过滤/聚合条件改为 `db.system.name="redis"`。如需区分客户端库，请使用
+  instrumentation scope name。
+
+## Elasticsearch：`http.server.request.duration` 替换为 `db.client.request.duration`
+
+Elasticsearch 插件此前错误注册了 `HttpServerMetrics("elasticsearch.client")`，会为
+客户端操作导出 `http.server.request.duration`。现已替换为
+`DbClientMetrics("nosql.elasticsearch")`。
+
+| 之前（不正确） | 之后 |
+| ------------- | ---- |
+| ES 插件导出的 `http.server.request.duration` | `db.client.request.duration`，且 `db.system.name=elasticsearch` |
+
+- **不变：** net/http 传输层的 `http.client.request.duration` 仍会为同一请求导出。
+- **迁移：** ES API 延迟请使用 `db.client.request.duration{db.system.name="elasticsearch"}`；
+  HTTP 传输延迟请使用 `http.client.request.duration`。依赖 ES 作用域下
+  `http.server.request.duration` 的看板需更新或移除。
+- **不做双写：** 原先在客户端 span 上导出的 `http.server.*` 不符合语义约定，不会在
+  弃用窗口内继续保留。

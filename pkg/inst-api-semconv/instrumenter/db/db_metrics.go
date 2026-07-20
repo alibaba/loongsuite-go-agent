@@ -32,6 +32,7 @@ const db_client_request_duration = "db.client.request.duration"
 type DbClientMetric struct {
 	key                   attribute.Key
 	clientRequestDuration metric.Float64Histogram
+	initOnce              sync.Once
 }
 
 var mu sync.Mutex
@@ -65,12 +66,24 @@ func newDbClientMetric(key string, meter metric.Meter) (*DbClientMetric, error) 
 	m := &DbClientMetric{
 		key: attribute.Key(key),
 	}
-	d, err := newDbClientRequestDurationMeasures(meter)
+	var err error
+	m.initOnce.Do(func() {
+		m.clientRequestDuration, err = newDbClientRequestDurationMeasures(meter)
+	})
 	if err != nil {
 		return nil, err
 	}
-	m.clientRequestDuration = d
 	return m, nil
+}
+
+func (h *DbClientMetric) ensureDuration() {
+	h.initOnce.Do(func() {
+		var err error
+		h.clientRequestDuration, err = newDbClientRequestDurationMeasures(globalMeter)
+		if err != nil {
+			log.Printf("failed to create clientRequestDuration: %v\n", err)
+		}
+	})
 }
 
 func newDbClientRequestDurationMeasures(meter metric.Meter) (metric.Float64Histogram, error) {
@@ -122,14 +135,7 @@ func (h *DbClientMetric) OnAfterEnd(ctx context.Context, endAttributes []attribu
 	}
 	startTime, startAttributes := mc.startTime, mc.startAttributes
 	// end attributes should be shadowed by AttrsShadower
-	if h.clientRequestDuration == nil {
-		var err error
-		// second change to init the metric
-		h.clientRequestDuration, err = newDbClientRequestDurationMeasures(globalMeter)
-		if err != nil {
-			log.Printf("failed to create clientRequestDuration, err is %v\n", err)
-		}
-	}
+	h.ensureDuration()
 	endAttributes = append(endAttributes, startAttributes...)
 	n, metricsAttrs := utils.Shadow(endAttributes, dbMetricsConv)
 	if h.clientRequestDuration != nil {
