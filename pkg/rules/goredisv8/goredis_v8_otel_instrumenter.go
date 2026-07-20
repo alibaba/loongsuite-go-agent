@@ -15,6 +15,8 @@
 package goredisv8
 
 import (
+	"errors"
+
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/db"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/instrumenter"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/utils"
@@ -43,25 +45,7 @@ func (d goRedisV8AttrsGetter) GetBatchSize(request redisv8Data) int {
 }
 
 func (d goRedisV8AttrsGetter) GetStatement(request redisv8Data) string {
-	b := make([]byte, 0, 64)
-
-	for i, arg := range request.cmd.Args() {
-		if i > 0 {
-			b = append(b, ' ')
-		}
-		b = redisV8AppendArg(b, arg)
-	}
-
-	if err := request.cmd.Err(); err != nil && err != redis.Nil {
-		b = append(b, ": "...)
-		b = append(b, err.Error()...)
-	}
-
-	if cmd, ok := request.cmd.(*redis.Cmd); ok {
-		b = append(b, ": "...)
-		b = redisV8AppendArg(b, cmd)
-	}
-	return redisV8String(b)
+	return getRedisV8Statement(request.cmd)
 }
 
 func (d goRedisV8AttrsGetter) GetCollection(request redisv8Data) string {
@@ -88,4 +72,32 @@ func BuildRedisv8Instrumenter() instrumenter.Instrumenter[redisv8Data, any] {
 			Version: version.Tag,
 		}).
 		BuildInstrumenter()
+}
+
+// getRedisV8Statement builds db.query.text.
+//
+// Keeps loongsuite's historical format by appending *redis.Cmd via its Stringer
+// (not cmd.Name()). Explicit err.Error() text is skipped for redis.Nil to avoid
+// duplicating the sentinel already present in cmd.String(); the statement may
+// still contain "redis: nil" via that Stringer.
+func getRedisV8Statement(cmd redis.Cmder) string {
+	b := make([]byte, 0, 64)
+
+	for i, arg := range cmd.Args() {
+		if i > 0 {
+			b = append(b, ' ')
+		}
+		b = redisV8AppendArg(b, arg)
+	}
+
+	if err := cmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
+		b = append(b, ": "...)
+		b = append(b, err.Error()...)
+	}
+
+	if cmd, ok := cmd.(*redis.Cmd); ok {
+		b = append(b, ": "...)
+		b = redisV8AppendArg(b, cmd)
+	}
+	return redisV8String(b)
 }

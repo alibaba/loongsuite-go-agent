@@ -123,12 +123,11 @@ func (o *otRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 			endpoint: o.Addr,
 		}
 		ctx = goRedisInstrumenter.Start(ctx, request)
-		if err := next(ctx, cmd); err != nil {
-			goRedisInstrumenter.End(ctx, request, nil, err)
-			return err
-		}
-		goRedisInstrumenter.End(ctx, request, nil, nil)
-		return nil
+		err := next(ctx, cmd)
+		// Mirrors otelc ProcessHook: always return err to caller; only non-nil
+		// errors excluding redis.Nil are passed to Instrumenter.End.
+		goRedisInstrumenter.End(ctx, request, nil, redisSpanEndErr(err))
+		return err
 	}
 }
 
@@ -151,11 +150,8 @@ func (o *otRedisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.
 			endpoint: o.Addr,
 		}
 		ctx = goRedisInstrumenter.Start(ctx, request)
-		if err := next(ctx, cmds); err != nil {
-			goRedisInstrumenter.End(ctx, request, nil, err)
-			return err
-		}
-		goRedisInstrumenter.End(ctx, request, nil, nil)
-		return nil
+		err := next(ctx, cmds)
+		goRedisInstrumenter.End(ctx, request, nil, redisPipelineSpanEndErr(cmds, err))
+		return err
 	}
 }

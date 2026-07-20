@@ -37,11 +37,25 @@ func main() {
 	}
 	// get a key that does not exist
 	rdb.Do(ctx, "get", "key").Result()
+
+	// pipeline with cache miss followed by a real Redis error
+	_, err = rdb.Set(ctx, "string-key", "not-a-number", 0).Result()
+	if err != nil {
+		panic(err)
+	}
+	pipe := rdb.Pipeline()
+	pipe.Get(ctx, "missing-key")
+	pipe.Incr(ctx, "string-key")
+	_, _ = pipe.Exec(ctx)
+
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyDbAttributes(stubs[0][0], "set", "redis", "localhost", "set a b ex 5", "set", "", nil)
 		verifier.VerifyDbAttributes(stubs[1][0], "get", "redis", "localhost", "get key", "get", "", nil)
-		if stubs[1][0].Status.Code != codes.Error {
-			panic("should have error status")
+		if stubs[1][0].Status.Code != codes.Unset {
+			panic("redis.Nil should not be span error status")
 		}
-	}, 2)
+		if stubs[3][0].Status.Code != codes.Error {
+			panic("mixed pipeline with redis.Nil and real error should be span error status")
+		}
+	}, 4)
 }

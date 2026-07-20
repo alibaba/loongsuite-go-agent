@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package http
+package db
 
 import (
 	"fmt"
@@ -21,27 +21,29 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/utils"
 )
 
-// NormalizeHTTPClientErrorType follows the upstream HTTPClientErrorType behavior
-// and uses the concrete Go error type as the error.type value.
-func NormalizeHTTPClientErrorType(err error) string {
+// NormalizeDBClientErrorType returns a low-cardinality error.type value for
+// failed DB client operations, matching HTTP/otelc style (concrete Go type name).
+// Empty when err is nil.
+func NormalizeDBClientErrorType(err error) string {
 	if err == nil {
 		return ""
 	}
+	// Guard against typed nil (e.g. (*MyError)(nil) stored in error interface).
+	if v := reflect.ValueOf(err); v.Kind() == reflect.Ptr && v.IsNil() {
+		return ""
+	}
 
-	// 1. 先进行 ErrorType() 接口判定，允许自定义错误控制
 	if et, ok := err.(interface{ ErrorType() string }); ok {
 		if s := et.ErrorType(); s != "" {
 			return s
 		}
 	}
 
-	// 2. 解包 fmt.Errorf("%w") 和 errors.Join 产生的标准库包装类，获取底层具体错误
 	err = utils.UnwrapFmtWrapped(err)
 	if err == nil {
 		return ""
 	}
 
-	// 3. 对解包后的具体错误，如果实现了 ErrorType() 同样优先调用
 	if et, ok := err.(interface{ ErrorType() string }); ok {
 		if s := et.ErrorType(); s != "" {
 			return s
