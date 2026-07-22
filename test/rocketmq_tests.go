@@ -28,13 +28,15 @@ import (
 )
 
 const (
-	rocketmqModuleName       = "rocketmq"
-	defaultWaitTimeout       = 30 * time.Second
-	brokerStartupDelay       = 5 * time.Second
-	containerStartMaxRetries = 3
+	rocketmqModuleName                        = "rocketmq"
+	defaultWaitTimeout                        = 30 * time.Second
+	brokerStartupDelay                        = 5 * time.Second
+	containerStartMaxRetries                  = 3
+	containerStartRetryDelay                  = 2 * time.Second
+	retryableContainerAuthError               = "unauthorized: authentication required"
+	retryableContainerRateLimitError          = "toomanyrequests"
+	retryableContainerConnectionCanceledError = "request canceled while waiting for connection"
 )
-
-var containerStartRetryDelay = 2 * time.Second
 
 func init() {
 	TestCases = append(TestCases,
@@ -217,13 +219,22 @@ func startContainerWithRetryFn(
 	req testcontainers.GenericContainerRequest,
 	startFn func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error),
 ) (testcontainers.Container, error) {
-	return startContainerWithRetryFnWithSleep(ctx, req, startFn, time.Sleep)
+	return startContainerWithRetryFnWithSleep(
+		ctx,
+		req,
+		startFn,
+		containerStartMaxRetries,
+		containerStartRetryDelay,
+		time.Sleep,
+	)
 }
 
 func startContainerWithRetryFnWithSleep(
 	ctx context.Context,
 	req testcontainers.GenericContainerRequest,
 	startFn func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error),
+	maxRetries int,
+	retryDelay time.Duration,
 	sleepFn func(time.Duration),
 ) (testcontainers.Container, error) {
 	var (
@@ -231,15 +242,15 @@ func startContainerWithRetryFnWithSleep(
 		c       testcontainers.Container
 	)
 
-	for attempt := 1; attempt <= containerStartMaxRetries; attempt++ {
+	for attempt := 1; attempt <= maxRetries; attempt++ {
 		c, lastErr = startFn(ctx, req)
 		if lastErr == nil {
 			return c, nil
 		}
-		if !isRetryableContainerStartError(lastErr) || attempt == containerStartMaxRetries {
+		if !isRetryableContainerStartError(lastErr) || attempt == maxRetries {
 			break
 		}
-		sleepFn(containerStartRetryDelay)
+		sleepFn(retryDelay)
 	}
 
 	return nil, lastErr
@@ -250,7 +261,7 @@ func isRetryableContainerStartError(err error) bool {
 		return false
 	}
 	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "unauthorized: authentication required") ||
-		strings.Contains(msg, "toomanyrequests") ||
-		strings.Contains(msg, "request canceled while waiting for connection")
+	return strings.Contains(msg, retryableContainerAuthError) ||
+		strings.Contains(msg, retryableContainerRateLimitError) ||
+		strings.Contains(msg, retryableContainerConnectionCanceledError)
 }
