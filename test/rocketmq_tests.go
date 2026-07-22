@@ -253,7 +253,10 @@ func startContainerWithRetryFnWithSleep(
 		if lastErr == nil {
 			return c, nil
 		}
-		if !isRetryableContainerStartError(lastErr) || attempt == maxAttempts {
+		if !isRetryableContainerStartError(lastErr) {
+			break
+		}
+		if attempt == maxAttempts {
 			break
 		}
 		sleepFn(retryDelay)
@@ -266,7 +269,7 @@ func isRetryableContainerStartError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := strings.ToLower(err.Error())
+	msg := err.Error()
 	for _, retryableError := range retryableContainerStartErrors {
 		if strings.Contains(msg, retryableError) {
 			return true
