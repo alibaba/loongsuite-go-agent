@@ -21,15 +21,19 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"strings"
 	"testing"
 	"time"
 )
 
 const (
-	rocketmqModuleName = "rocketmq"
-	defaultWaitTimeout = 30 * time.Second
-	brokerStartupDelay = 5 * time.Second
+	rocketmqModuleName       = "rocketmq"
+	defaultWaitTimeout       = 30 * time.Second
+	brokerStartupDelay       = 5 * time.Second
+	containerStartMaxRetries = 3
 )
+
+var containerStartRetryDelay = 2 * time.Second
 
 func init() {
 	TestCases = append(TestCases,
@@ -132,7 +136,7 @@ func initRocketMQContainer(t *testing.T) *RocketMQContainers {
 		},
 	}
 
-	nameServerC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	nameServerC, err := startContainerWithRetry(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: nameServerReq,
 		Started:          true,
 	})
@@ -181,7 +185,7 @@ brokerIP1=` + host
 		WaitingFor: wait.ForLog("The broker[broker-a").WithStartupTimeout(defaultWaitTimeout * 2),
 	}
 
-	brokerC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	brokerC, err := startContainerWithRetry(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: brokerReq,
 		Started:          true,
 	})
@@ -201,4 +205,42 @@ brokerIP1=` + host
 		NameSrvAddr:      nameSrvAddr,
 		BrokerAddr:       brokerAddr,
 	}
+}
+
+func startContainerWithRetry(ctx context.Context, req testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
+	return startContainerWithRetryFn(ctx, req, testcontainers.GenericContainer)
+}
+
+func startContainerWithRetryFn(
+	ctx context.Context,
+	req testcontainers.GenericContainerRequest,
+	startFn func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error),
+) (testcontainers.Container, error) {
+	var (
+		lastErr error
+		c       testcontainers.Container
+	)
+
+	for attempt := 1; attempt <= containerStartMaxRetries; attempt++ {
+		c, lastErr = startFn(ctx, req)
+		if lastErr == nil {
+			return c, nil
+		}
+		if !isRetryableContainerStartError(lastErr) || attempt == containerStartMaxRetries {
+			break
+		}
+		time.Sleep(containerStartRetryDelay)
+	}
+
+	return nil, lastErr
+}
+
+func isRetryableContainerStartError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unauthorized: authentication required") ||
+		strings.Contains(msg, "toomanyrequests") ||
+		strings.Contains(msg, "request canceled while waiting for connection")
 }
