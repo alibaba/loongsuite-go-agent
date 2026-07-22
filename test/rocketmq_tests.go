@@ -38,6 +38,7 @@ const (
 var retryableContainerStartErrorSubstrings = []string{
 	"unauthorized: authentication required",
 	"toomanyrequests",
+	"too many requests",
 	"request canceled while waiting for connection",
 }
 
@@ -266,7 +267,7 @@ func isRetryableContainerStartError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
+	msg := strings.ToLower(err.Error())
 	for _, retryableError := range retryableContainerStartErrorSubstrings {
 		if strings.Contains(msg, retryableError) {
 			return true
