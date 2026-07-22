@@ -35,7 +35,7 @@ const (
 	containerStartRetryDelay  = 2 * time.Second
 )
 
-var retryableContainerStartErrors = []string{
+var retryableContainerStartErrorSubstrings = []string{
 	"unauthorized: authentication required",
 	"toomanyrequests",
 	"request canceled while waiting for connection",
@@ -266,8 +266,8 @@ func isRetryableContainerStartError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := strings.ToLower(err.Error())
-	for _, retryableError := range retryableContainerStartErrors {
+	msg := err.Error()
+	for _, retryableError := range retryableContainerStartErrorSubstrings {
 		if strings.Contains(msg, retryableError) {
 			return true
 		}
