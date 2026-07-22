@@ -38,6 +38,12 @@ const (
 	retryableContainerConnectionCanceledError = "request canceled while waiting for connection"
 )
 
+var retryableContainerStartErrors = []string{
+	retryableContainerAuthError,
+	retryableContainerRateLimitError,
+	retryableContainerConnectionCanceledError,
+}
+
 func init() {
 	TestCases = append(TestCases,
 		NewGeneralTestCase("rocketmq_basic-test", rocketmqModuleName, "2.0.0", "", "1.18", "", TestRocketMQBasic),
@@ -261,7 +267,10 @@ func isRetryableContainerStartError(err error) bool {
 		return false
 	}
 	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, retryableContainerAuthError) ||
-		strings.Contains(msg, retryableContainerRateLimitError) ||
-		strings.Contains(msg, retryableContainerConnectionCanceledError)
+	for _, retryableError := range retryableContainerStartErrors {
+		if strings.Contains(msg, retryableError) {
+			return true
+		}
+	}
+	return false
 }
