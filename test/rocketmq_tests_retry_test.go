@@ -4,31 +4,37 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 )
 
 func TestStartContainerWithRetryFn_RetryableErrorThenSuccess(t *testing.T) {
-	originalDelay := containerStartRetryDelay
-	containerStartRetryDelay = 0
-	defer func() {
-		containerStartRetryDelay = originalDelay
-	}()
-
 	callCount := 0
-	_, err := startContainerWithRetryFn(context.Background(), testcontainers.GenericContainerRequest{}, func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
-		callCount++
-		if callCount < containerStartMaxRetries {
-			return nil, errors.New("create container: unauthorized: authentication required")
-		}
-		return nil, nil
-	})
+	sleepCount := 0
+	_, err := startContainerWithRetryFnWithSleep(
+		context.Background(),
+		testcontainers.GenericContainerRequest{},
+		func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
+			callCount++
+			if callCount < containerStartMaxRetries {
+				return nil, errors.New("create container: unauthorized: authentication required")
+			}
+			return nil, nil
+		},
+		func(time.Duration) {
+			sleepCount++
+		},
+	)
 
 	if err != nil {
 		t.Fatalf("expected retry to eventually succeed, got error: %v", err)
 	}
 	if callCount != containerStartMaxRetries {
 		t.Fatalf("expected %d attempts, got %d", containerStartMaxRetries, callCount)
+	}
+	if sleepCount != containerStartMaxRetries-1 {
+		t.Fatalf("expected %d retry delays, got %d", containerStartMaxRetries-1, sleepCount)
 	}
 }
 

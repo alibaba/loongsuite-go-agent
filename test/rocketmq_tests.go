@@ -16,14 +16,15 @@ package test
 
 import (
 	"context"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -216,6 +217,15 @@ func startContainerWithRetryFn(
 	req testcontainers.GenericContainerRequest,
 	startFn func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error),
 ) (testcontainers.Container, error) {
+	return startContainerWithRetryFnWithSleep(ctx, req, startFn, time.Sleep)
+}
+
+func startContainerWithRetryFnWithSleep(
+	ctx context.Context,
+	req testcontainers.GenericContainerRequest,
+	startFn func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error),
+	sleepFn func(time.Duration),
+) (testcontainers.Container, error) {
 	var (
 		lastErr error
 		c       testcontainers.Container
@@ -229,7 +239,7 @@ func startContainerWithRetryFn(
 		if !isRetryableContainerStartError(lastErr) || attempt == containerStartMaxRetries {
 			break
 		}
-		time.Sleep(containerStartRetryDelay)
+		sleepFn(containerStartRetryDelay)
 	}
 
 	return nil, lastErr
