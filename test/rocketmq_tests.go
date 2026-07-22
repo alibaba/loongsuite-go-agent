@@ -28,20 +28,17 @@ import (
 )
 
 const (
-	rocketmqModuleName                        = "rocketmq"
-	defaultWaitTimeout                        = 30 * time.Second
-	brokerStartupDelay                        = 5 * time.Second
-	containerStartMaxAttempts                 = 3
-	containerStartRetryDelay                  = 2 * time.Second
-	retryableContainerAuthError               = "unauthorized: authentication required"
-	retryableContainerRateLimitError          = "toomanyrequests"
-	retryableContainerConnectionCanceledError = "request canceled while waiting for connection"
+	rocketmqModuleName        = "rocketmq"
+	defaultWaitTimeout        = 30 * time.Second
+	brokerStartupDelay        = 5 * time.Second
+	containerStartMaxAttempts = 3
+	containerStartRetryDelay  = 2 * time.Second
 )
 
 var retryableContainerStartErrors = []string{
-	retryableContainerAuthError,
-	retryableContainerRateLimitError,
-	retryableContainerConnectionCanceledError,
+	"unauthorized: authentication required",
+	"toomanyrequests",
+	"request canceled while waiting for connection",
 }
 
 func init() {
@@ -269,7 +266,7 @@ func isRetryableContainerStartError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
+	msg := strings.ToLower(err.Error())
 	for _, retryableError := range retryableContainerStartErrors {
 		if strings.Contains(msg, retryableError) {
 			return true
