@@ -10,7 +10,7 @@ import (
 )
 
 func TestStartContainerWithRetryFn_RetryableErrorThenSuccess(t *testing.T) {
-	const maxRetries = 3
+	const maxAttempts = 3
 	const retryDelay = 5 * time.Millisecond
 
 	callCount := 0
@@ -20,12 +20,12 @@ func TestStartContainerWithRetryFn_RetryableErrorThenSuccess(t *testing.T) {
 		testcontainers.GenericContainerRequest{},
 		func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
 			callCount++
-			if callCount < maxRetries {
+			if callCount < maxAttempts {
 				return nil, errors.New("create container: unauthorized: authentication required")
 			}
 			return nil, nil
 		},
-		maxRetries,
+		maxAttempts,
 		retryDelay,
 		func(time.Duration) {
 			sleepCount++
@@ -35,42 +35,29 @@ func TestStartContainerWithRetryFn_RetryableErrorThenSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected retry to eventually succeed, got error: %v", err)
 	}
-	if callCount != maxRetries {
-		t.Fatalf("expected %d attempts, got %d", maxRetries, callCount)
+	if callCount != maxAttempts {
+		t.Fatalf("expected %d attempts, got %d", maxAttempts, callCount)
 	}
-	if sleepCount != maxRetries-1 {
-		t.Fatalf("expected %d retry delays, got %d", maxRetries-1, sleepCount)
+	if sleepCount != maxAttempts-1 {
+		t.Fatalf("expected %d retry delays, got %d", maxAttempts-1, sleepCount)
 	}
 }
 
 func TestStartContainerWithRetryFn_NonRetryableError(t *testing.T) {
-	const maxRetries = 3
+	const maxAttempts = 3
 	const retryDelay = 5 * time.Millisecond
 
 	callCount := 0
 	expectedErr := errors.New("create container: invalid reference format")
-	_, err := startContainerWithRetryFn(context.Background(), testcontainers.GenericContainerRequest{}, func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
-		callCount++
-		return nil, expectedErr
-	})
-
-	if !errors.Is(err, expectedErr) {
-		t.Fatalf("expected error %v, got %v", expectedErr, err)
-	}
-	if callCount != 1 {
-		t.Fatalf("expected 1 attempt for non-retryable error, got %d", callCount)
-	}
-
-	callCount = 0
 	sleepCount := 0
-	_, err = startContainerWithRetryFnWithSleep(
+	_, err := startContainerWithRetryFnWithSleep(
 		context.Background(),
 		testcontainers.GenericContainerRequest{},
 		func(context.Context, testcontainers.GenericContainerRequest) (testcontainers.Container, error) {
 			callCount++
 			return nil, expectedErr
 		},
-		maxRetries,
+		maxAttempts,
 		retryDelay,
 		func(time.Duration) {
 			sleepCount++
@@ -78,6 +65,9 @@ func TestStartContainerWithRetryFn_NonRetryableError(t *testing.T) {
 	)
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+	if callCount != 1 {
+		t.Fatalf("expected 1 attempt for non-retryable error, got %d", callCount)
 	}
 	if sleepCount != 0 {
 		t.Fatalf("expected no retry delays for non-retryable error, got %d", sleepCount)
