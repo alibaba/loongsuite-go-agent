@@ -22,7 +22,6 @@ import (
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
-	"go.opentelemetry.io/otel/trace"
 
 	redis "github.com/redis/go-redis/v9"
 )
@@ -38,8 +37,6 @@ func (r redisV9InnerEnabler) Enable() bool {
 }
 
 var rv9Enabler = redisV9InnerEnabler{os.Getenv("OTEL_INSTRUMENTATION_REDISV9_ENABLED") != "false"}
-
-var redisV9StartOptions = []trace.SpanStartOption{}
 
 //go:linkname afterNewRedisClient github.com/redis/go-redis/v9.afterNewRedisClient
 func afterNewRedisClient(call api.CallContext, client *redis.Client) {
@@ -115,7 +112,8 @@ func (o *otRedisHook) DialHook(next redis.DialHook) redis.DialHook {
 
 func (o *otRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	return func(ctx context.Context, cmd redis.Cmder) error {
-		if strings.Contains(cmd.FullName(), "ping") || strings.Contains(cmd.FullName(), "PING") {
+		name := cmd.FullName()
+		if strings.Contains(name, "ping") || strings.Contains(name, "PING") {
 			return next(ctx, cmd)
 		}
 		request := goRedisRequest{
@@ -133,18 +131,19 @@ func (o *otRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 
 func (o *otRedisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
 	return func(ctx context.Context, cmds []redis.Cmder) error {
-		summary := ""
+		var summary strings.Builder
 		summaryCmds := cmds
 		if len(summaryCmds) > 10 {
 			summaryCmds = summaryCmds[:10]
 		}
 		for i := range summaryCmds {
-			summary += summaryCmds[i].FullName() + "/"
+			summary.WriteString(summaryCmds[i].FullName())
+			summary.WriteByte('/')
 		}
 		if len(cmds) > 10 {
-			summary += "..."
+			summary.WriteString("...")
 		}
-		cmd := redis.NewCmd(ctx, "pipeline", summary)
+		cmd := redis.NewCmd(ctx, "pipeline", summary.String())
 		request := goRedisRequest{
 			cmd:      cmd,
 			endpoint: o.Addr,
