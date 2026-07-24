@@ -21,18 +21,21 @@ import (
 )
 
 type netHttpRequest struct {
-	method  string
-	url     *url.URL
-	host    string
-	isTls   bool
-	header  http.Header
-	version string
+	method         string
+	url            *url.URL
+	host           string
+	isTls          bool
+	header         http.Header
+	version        string
+	requestHeaders string
+	requestBody    string
 }
 
 type netHttpResponse struct {
-	statusCode  int
-	header      http.Header
-	hasResponse bool
+	statusCode   int
+	header       http.Header
+	hasResponse  bool
+	responseBody string
 }
 
 func getProtocolVersion(majorVersion, minorVersion int) string {

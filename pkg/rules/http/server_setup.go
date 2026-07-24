@@ -32,6 +32,9 @@ func serverOnEnter(call api.CallContext, _ interface{}, w http.ResponseWriter, r
 	if !netHttpEnabler.Enable() {
 		return
 	}
+	if r == nil {
+		return
+	}
 	if netHttpFilter.FilterUrl(r.URL) {
 		return
 	}
@@ -43,9 +46,16 @@ func serverOnEnter(call api.CallContext, _ interface{}, w http.ResponseWriter, r
 		host:    r.Host,
 		isTls:   r.TLS != nil,
 	}
+	request.requestHeaders = netHttpCaptureConfig.captureHeaders(r.Header)
+	request.requestBody = captureHTTPRequestBody(r, netHttpCaptureConfig)
 	ctx := netHttpServerInstrumenter.Start(r.Context(), request)
 	if x, ok := call.GetParam(1).(http.ResponseWriter); ok {
-		x1 := &writerWrapper{ResponseWriter: x, statusCode: http.StatusOK}
+		x1 := &writerWrapper{
+			ResponseWriter: x,
+			statusCode:     http.StatusOK,
+			captureBody:    netHttpCaptureConfig.captureBody,
+			maxBodyBytes:   netHttpCaptureConfig.maxBodyBytes,
+		}
 		call.SetParam(1, x1)
 	}
 	data := make(map[string]interface{}, 2)
@@ -72,7 +82,10 @@ func serverOnExit(call api.CallContext) {
 	if p, ok := call.GetParam(1).(http.ResponseWriter); ok {
 		if w1, ok := p.(*writerWrapper); ok {
 			netHttpServerInstrumenter.End(ctx, request, &netHttpResponse{
-				statusCode: w1.statusCode,
+				statusCode:   w1.statusCode,
+				header:       w1.Header(),
+				hasResponse:  true,
+				responseBody: w1.capturedResponseBody(),
 			}, nil)
 		}
 	}
@@ -82,7 +95,16 @@ func serverOnExit(call api.CallContext) {
 
 type writerWrapper struct {
 	http.ResponseWriter
-	statusCode int
+	statusCode           int
+	captureBody          bool
+	maxBodyBytes         int64
+	responseBody         []byte
+	responseBodyOverflow bool
+}
+
+func (w *writerWrapper) Write(data []byte) (int, error) {
+	w.captureResponseBody(data)
+	return w.ResponseWriter.Write(data)
 }
 
 func (w *writerWrapper) WriteHeader(statusCode int) {

@@ -88,6 +88,7 @@ test/trpc/v1.0.0/test_trpc_metrics
 test/zap/test_zap_with_field
 
 test/nethttp/nethttp
+test/nethttp/test_http_capture
 test/redigo/v1.9.0/redigo
 test/redis/v8.11.0/test_redis_ring
 test/redis/v8.11.0/v8.11.0

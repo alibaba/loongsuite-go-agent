@@ -2,7 +2,7 @@ const repoRoot = 'https://github.com/alibaba/loongsuite-go';
 export default {
     lang: 'en-US',
     title: ' ',
-    description: 'It provides an automatic solution for Golang applications that want to leverage OpenTelemetry to enable effective observability. No code changes are required in the target application, the instrumentation is done at compile time. Simply adding `otel` prefix to `go build` to get started ', 
+    description: 'It provides an automatic solution for Golang applications that want to leverage OpenTelemetry to enable effective observability. No code changes are required in the target application, the instrumentation is done at compile time. Simply adding `otel` prefix to `go build` to get started ',
     ignoreDeadLinks: true,
     base: '/loongsuite-go/',
     locales: {
@@ -19,7 +19,7 @@ export default {
     themeConfig: {
         logo: '/loongsuite.png',
         nav: [
-            { 
+            {
                 text: 'Download',
                 items: [
                     { text: 'Linux AMD64', link: `${repoRoot}/releases/latest/download/otel-linux-amd64` },
@@ -69,6 +69,7 @@ export default {
                         { text: 'Write the Hook Code', link: '/dev/hook' },
                         { text: 'Test the Hook Code', link: '/dev/test' },
                         { text: 'Hook Rule Types', link: '/dev/rule_def' },
+                        { text: 'HTTP Capture Proposal', link: '/dev/http-capture' },
                     ]
                   },
                 {
@@ -112,6 +113,7 @@ export default {
                         { text: '编写Hook代码', link: '/zh/dev/hook' },
                         { text: '测试Hook代码', link: '/zh/dev/test' },
                         { text: 'Hook规则类型', link: '/zh/dev/rule_def' },
+                        { text: 'HTTP采集方案', link: '/zh/dev/http-capture' },
                     ]
                   },
                 {
