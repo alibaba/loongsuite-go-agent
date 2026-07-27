@@ -22,17 +22,20 @@ detect() {
     if [ "${CURRENT_ARCH}" == "x86_64" ]; then
         CURRENT_ARCH="amd64"
     fi
+    if [ "${CURRENT_ARCH}" == "aarch64" ] || [ "${CURRENT_ARCH}" == "arm64" ]; then
+        CURRENT_ARCH="arm64"
+    fi
 
     echo "Detected platform: ${CURRENT_OS} ${CURRENT_ARCH}"
 }
 
 download() {
-    DOWNLOAD_URL="https://github.com/alibaba/loongsuite-go/releases/latest/download/otel-${CURRENT_OS}-${CURRENT_ARCH}"
+    DOWNLOAD_URL="https://github.com/GuanceCloud/loongsuite-go/releases/latest/download/otel-${CURRENT_OS}-${CURRENT_ARCH}"
     EXECUTABLE="otel"
 
     echo "Downloading from $DOWNLOAD_URL"
     # curl and show progress
-    curl -L -o "$EXECUTABLE" "$DOWNLOAD_URL"
+    curl -fL -o "$EXECUTABLE" "$DOWNLOAD_URL"
 
     if [ $? -ne 0 ]; then
         echo "Failed to download $DOWNLOAD_URL"
