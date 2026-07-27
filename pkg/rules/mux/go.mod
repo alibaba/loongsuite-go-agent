@@ -7,10 +7,12 @@ replace github.com/alibaba/loongsuite-go/pkg => ../../../pkg
 require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/gorilla/mux v1.3.0
-	go.opentelemetry.io/otel/sdk v1.40.0
 )
 
+require go.opentelemetry.io/otel/sdk v1.40.0 // indirect
+
 require (
+	github.com/alibaba/loongsuite-go/pkg/rules/http v0.0.0-00010101000000-000000000000
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -22,3 +24,5 @@ require (
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 )
+
+replace github.com/alibaba/loongsuite-go/pkg/rules/http => ../http

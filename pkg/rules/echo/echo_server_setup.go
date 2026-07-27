@@ -19,8 +19,8 @@ import (
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	otelhttp "github.com/alibaba/loongsuite-go/pkg/rules/http"
 	echo "github.com/labstack/echo/v4"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 type echoInnerEnabler struct {
@@ -39,9 +39,10 @@ func otelTraceMiddleware() echo.MiddlewareFunc {
 			if err = next(c); err != nil {
 				c.Error(err)
 			}
-			lcs := trace.LocalRootSpanFromGLS()
-			if lcs != nil && c.Path() != "" && c.Request() != nil && c.Request().URL != nil && (c.Request().URL.Path != c.Path()) {
-				lcs.SetName(c.Path())
+			route := c.Path()
+			if route != "" && c.Request() != nil {
+				otelhttp.SetServerRouteTemplate(c.Request(), route)
+				otelhttp.UpdateServerSpanName(c.Request().Method, route)
 			}
 			return
 		}

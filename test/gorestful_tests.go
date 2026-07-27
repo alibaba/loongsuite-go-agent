@@ -19,6 +19,7 @@ import "testing"
 func init() {
 	TestCases = append(TestCases,
 		NewGeneralTestCase("gorestful-test-pattern", "gorestful", "", "", "1.21", "", TestGoRestfulPattern),
+		NewGeneralTestCase("gorestful-test-handle-with-filter", "gorestful", "", "", "1.21", "", TestGoRestfulHandleWithFilter),
 	)
 }
 
@@ -26,4 +27,10 @@ func TestGoRestfulPattern(t *testing.T, env ...string) {
 	UseApp("gorestful")
 	RunGoBuild(t, "go", "build", "test_restful_pattern.go")
 	RunApp(t, "test_restful_pattern", env...)
+}
+
+func TestGoRestfulHandleWithFilter(t *testing.T, env ...string) {
+	UseApp("gorestful")
+	RunGoBuild(t, "go", "build", "test_restful_handle_with_filter.go")
+	RunApp(t, "test_restful_handle_with_filter", env...)
 }

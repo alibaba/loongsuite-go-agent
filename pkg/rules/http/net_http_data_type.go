@@ -21,12 +21,14 @@ import (
 )
 
 type netHttpRequest struct {
-	method  string
-	url     *url.URL
-	host    string
-	isTls   bool
-	header  http.Header
-	version string
+	method        string
+	url           *url.URL
+	host          string
+	isTls         bool
+	header        http.Header
+	version       string
+	rawRequest    *http.Request
+	routeTemplate string
 }
 
 type netHttpResponse struct {

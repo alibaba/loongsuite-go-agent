@@ -46,6 +46,6 @@ func main() {
 
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "https://localhost:8080/", "https", "", "tcp", "ipv4", "", "localhost:8080", 200, 0, 8080)
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /", "GET", "http", "tcp", "ipv4", "", "localhost:8080", "fasthttp", "http", "/", "", "/", 200)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET", "GET", "http", "tcp", "ipv4", "", "localhost:8080", "fasthttp", "http", "/", "", verifier.OmitHttpRoute, 200)
 	}, 1)
 }

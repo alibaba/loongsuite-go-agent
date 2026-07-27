@@ -19,9 +19,8 @@ import (
 	"os"
 	_ "unsafe"
 
-	"go.opentelemetry.io/otel/sdk/trace"
-
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	otelhttp "github.com/alibaba/loongsuite-go/pkg/rules/http"
 	mux "github.com/gorilla/mux"
 )
 
@@ -40,18 +39,19 @@ func muxRoute130OnEnter(call api.CallContext, req *http.Request, route interface
 	if !muxEnabler.Enable() {
 		return
 	}
-	if req != nil {
-		lcs := trace.LocalRootSpanFromGLS()
-		if lcs != nil && route != nil {
-			r, ok := route.(*mux.Route)
-			if ok {
-				tmpl, err := r.GetPathTemplate()
-				if err == nil && req.URL != nil && tmpl != req.URL.Path {
-					lcs.SetName(tmpl)
-				}
-			}
-		}
+	if req == nil || route == nil {
+		return
 	}
+	r, ok := route.(*mux.Route)
+	if !ok {
+		return
+	}
+	tmpl, err := r.GetPathTemplate()
+	if err != nil || tmpl == "" {
+		return
+	}
+	otelhttp.SetServerRouteTemplate(req, tmpl)
+	otelhttp.UpdateServerSpanName(req.Method, tmpl)
 }
 
 // since mux v1.7.4
@@ -61,13 +61,13 @@ func muxRoute174OnEnter(call api.CallContext, req *http.Request, route *mux.Rout
 	if !muxEnabler.Enable() {
 		return
 	}
-	if req != nil {
-		lcs := trace.LocalRootSpanFromGLS()
-		if lcs != nil && route != nil {
-			tmpl, err := route.GetPathTemplate()
-			if err == nil && req.URL != nil && tmpl != req.URL.Path {
-				lcs.SetName(tmpl)
-			}
-		}
+	if req == nil || route == nil {
+		return
 	}
+	tmpl, err := route.GetPathTemplate()
+	if err != nil || tmpl == "" {
+		return
+	}
+	otelhttp.SetServerRouteTemplate(req, tmpl)
+	otelhttp.UpdateServerSpanName(req.Method, tmpl)
 }

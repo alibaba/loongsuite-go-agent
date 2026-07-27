@@ -182,7 +182,7 @@ func (n fastHttpServerAttrsGetter) GetNetworkPeerPort(request fastHttpRequest, r
 	return port
 }
 func (n fastHttpServerAttrsGetter) GetHttpRoute(request fastHttpRequest) string {
-	return request.url.Path
+	return ""
 }
 
 type fastHttpRequestCarrier struct {

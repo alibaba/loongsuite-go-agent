@@ -7,5 +7,13 @@
     "OnEnter": "fiberHttpOnEnterv2",
     "OnExit": "fiberHttpOnExitv2",
     "Path": "github.com/alibaba/loongsuite-go/pkg/rules/fiberv2"
+  },
+  {
+    "Version": "[2.43.0,2.53.0)",
+    "ImportPath": "github.com/gofiber/fiber/v2",
+    "Function": "ReleaseCtx",
+    "ReceiverType": "\\*App",
+    "OnEnter": "fiberRouteOnEnterv2",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/fiberv2"
   }
 ]

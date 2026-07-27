@@ -20,6 +20,7 @@ func init() {
 	TestCases = append(TestCases,
 		NewGeneralTestCase("gin-test-html", "gin", "", "", "1.21", "", TestGinHTML),
 		NewGeneralTestCase("gin-test-pattern", "gin", "", "", "1.21", "", TestGinPattern),
+		NewGeneralTestCase("gin-test-static", "gin", "", "", "1.21", "", TestGinStatic),
 	)
 }
 
@@ -33,4 +34,10 @@ func TestGinPattern(t *testing.T, env ...string) {
 	UseApp("gin")
 	RunGoBuild(t, "go", "build", "test_gin_pattern.go")
 	RunApp(t, "test_gin_pattern", env...)
+}
+
+func TestGinStatic(t *testing.T, env ...string) {
+	UseApp("gin")
+	RunGoBuild(t, "go", "build", "test_gin_static.go")
+	RunApp(t, "test_gin_static", env...)
 }

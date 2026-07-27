@@ -21,11 +21,12 @@ import (
 )
 
 type fiberv2Request struct {
-	method string
-	url    *url.URL
-	isTls  bool
-	port   int
-	header *fasthttp.RequestHeader
+	method        string
+	url           *url.URL
+	isTls         bool
+	port          int
+	header        *fasthttp.RequestHeader
+	routeTemplate string
 }
 
 type fiberv2Response struct {

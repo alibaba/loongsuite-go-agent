@@ -27,10 +27,10 @@ func main() {
 	GetRoute()
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "http://127.0.0.1:8888/hertz/v1", "http", "", "tcp", "ipv4", "", "127.0.0.1:8888", 301, 0, 8888)
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /hertz/v1/", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v1/", "", "/hertz/v1/", 301)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v1/", "", verifier.OmitHttpRoute, 301)
 		verifier.VerifyHttpClientAttributes(stubs[1][0], "GET", "GET", "http://127.0.0.1:8888/hertz/v1/", "http", "", "tcp", "ipv4", "", "127.0.0.1:8888", 200, 0, 8888)
-		verifier.VerifyHttpServerAttributes(stubs[1][1], "/hertz/:version/*action", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v1/", "", "/hertz/:version/*action", 200)
+		verifier.VerifyHttpServerAttributes(stubs[1][1], "GET /hertz/:version/*action", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v1/", "", "/hertz/:version/*action", 200)
 		verifier.VerifyHttpClientAttributes(stubs[2][0], "GET", "GET", "http://127.0.0.1:8888/hertz/v2/send", "http", "", "tcp", "ipv4", "", "127.0.0.1:8888", 200, 0, 8888)
-		verifier.VerifyHttpServerAttributes(stubs[2][1], "/hertz/:version/*action", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v2/send", "", "/hertz/:version/*action", 200)
+		verifier.VerifyHttpServerAttributes(stubs[2][1], "GET /hertz/:version/*action", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/hertz/v2/send", "", "/hertz/:version/*action", 200)
 	}, 3)
 }

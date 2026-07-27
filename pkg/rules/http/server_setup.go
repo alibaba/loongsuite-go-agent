@@ -23,6 +23,7 @@ import (
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	semconvhttp "github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/http"
 )
 
 var netHttpServerInstrumenter = BuildNetHttpServerOtelInstrumenter()
@@ -35,15 +36,21 @@ func serverOnEnter(call api.CallContext, _ interface{}, w http.ResponseWriter, r
 	if netHttpFilter.FilterUrl(r.URL) {
 		return
 	}
+	// Clear any stale fallback entry from a prior keep-alive request reusing *r.
+	serverRouteTemplates.LoadAndDelete(r)
 	request := &netHttpRequest{
-		method:  r.Method,
-		url:     r.URL,
-		header:  r.Header,
-		version: getProtocolVersion(r.ProtoMajor, r.ProtoMinor),
-		host:    r.Host,
-		isTls:   r.TLS != nil,
+		method:     r.Method,
+		url:        r.URL,
+		header:     r.Header,
+		version:    getProtocolVersion(r.ProtoMajor, r.ProtoMinor),
+		host:       r.Host,
+		isTls:      r.TLS != nil,
+		rawRequest: r,
 	}
-	ctx := netHttpServerInstrumenter.Start(r.Context(), request)
+	container := &routeTemplateContainer{}
+	rCtx := context.WithValue(r.Context(), routeContainerKey{}, container)
+	*r = *r.WithContext(rCtx)
+	ctx := netHttpServerInstrumenter.Start(rCtx, request)
 	if x, ok := call.GetParam(1).(http.ResponseWriter); ok {
 		x1 := &writerWrapper{ResponseWriter: x, statusCode: http.StatusOK}
 		call.SetParam(1, x1)
@@ -69,6 +76,20 @@ func serverOnExit(call api.CallContext) {
 	if !ok {
 		return
 	}
+	if request.rawRequest != nil {
+		r := request.rawRequest
+		if route := takeServerRouteTemplate(ctx, r); route != "" {
+			request.routeTemplate = route
+		} else if pattern := r.Pattern; pattern != "" {
+			// ServeMux patterns (including static ones like "GET /query" or "/a")
+			// are low-cardinality templates. Bare handlers leave Pattern empty.
+			request.routeTemplate = semconvhttp.RouteFromPattern(pattern)
+		}
+	}
+	if request.routeTemplate != "" {
+		UpdateServerSpanName(request.method, request.routeTemplate)
+	}
+
 	if p, ok := call.GetParam(1).(http.ResponseWriter); ok {
 		if w1, ok := p.(*writerWrapper); ok {
 			netHttpServerInstrumenter.End(ctx, request, &netHttpResponse{

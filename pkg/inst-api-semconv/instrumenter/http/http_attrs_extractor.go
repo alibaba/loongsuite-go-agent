@@ -19,11 +19,8 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/net"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/utils"
 	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
-	"go.opentelemetry.io/otel/trace"
 	"strconv"
-	"strings"
 )
 
 // TODO: remove server.address and put it into NetworkAttributesExtractor
@@ -108,7 +105,7 @@ func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnEnd(at
 		Key:   semconv.NetworkProtocolVersionKey,
 		Value: attribute.StringValue(protocolVersion),
 	})
-	
+
 	// 客户端由于有特有的 hasResponse 属性判断、status_code 哨兵值逻辑以及特定的 error.type 覆盖契约，
 	// 因而此处特意与服务端通用的 Base.OnEnd 进行了逻辑解耦，独立实现。
 	if hasResponse {
@@ -205,13 +202,8 @@ func (h *HttpServerAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2, GETTER3])
 		}
 	}
 
-	span := trace.SpanFromContext(context)
-	localRootSpan, ok := span.(sdktrace.ReadOnlySpan)
-	if ok && span.IsRecording() {
-		route := h.Base.HttpGetter.GetHttpRoute(request)
-		if !strings.Contains(localRootSpan.Name(), route) {
-			route = localRootSpan.Name()
-		}
+	route := ResolveHttpServerRoute(h.Base.HttpGetter, request)
+	if route != "" {
 		attributes = append(attributes, attribute.KeyValue{
 			Key:   semconv.HTTPRouteKey,
 			Value: attribute.StringValue(route),

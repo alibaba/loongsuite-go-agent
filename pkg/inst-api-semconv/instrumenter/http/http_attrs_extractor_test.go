@@ -482,7 +482,7 @@ func TestHttpServerExtractorEnd500(t *testing.T) {
 	ctx := context.Background()
 	ctx = trace.ContextWithSpan(ctx, &testReadOnlySpan{isRecording: true})
 	attrs, _ = httpServerExtractor.OnEnd(attrs, ctx, testRequest{}, testResponse{}, nil)
-	
+
 	var foundErrorType bool
 	var errorTypeVal string
 	var errorTypeCount int
@@ -517,7 +517,7 @@ func TestHttpServerExtractorEnd500WithCustomErrorType(t *testing.T) {
 	ctx := context.Background()
 	ctx = trace.ContextWithSpan(ctx, &testReadOnlySpan{isRecording: true})
 	attrs, _ = httpServerExtractor.OnEnd(attrs, ctx, testRequest{}, testResponse{}, nil)
-	
+
 	var errorTypeCount int
 	var errorTypeVal string
 	for _, attr := range attrs {

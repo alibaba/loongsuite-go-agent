@@ -24,6 +24,9 @@ func init() {
 		NewGeneralTestCase("basic-fiberv2-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2),
 		NewGeneralTestCase("basic-fiberv2s-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2Https),
 		NewGeneralTestCase("basic-fiberv2-metrics-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2Metrics),
+		NewGeneralTestCase("basic-fiberv2-route-pattern-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2RoutePattern),
+		NewGeneralTestCase("basic-fiberv2-route-static-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2RouteStatic),
+		NewGeneralTestCase("basic-fiberv2-route-metrics-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2RouteMetrics),
 		NewLatestDepthTestCase("fiberv2-latestdepth", fiberv2_dependency_name, fiberv2_module_name, "v2.43.0", "", "1.18", "", TestBasicFiberv2),
 		NewMuzzleTestCase("fiberv2-muzzle", fiberv2_dependency_name, fiberv2_module_name, "v2.43.0", "", "1.18", "", []string{"go", "build", "fiber_http.go"}))
 }
@@ -44,4 +47,22 @@ func TestBasicFiberv2Metrics(t *testing.T, env ...string) {
 	UseApp("fiberv2/v2.43.0")
 	RunGoBuild(t, "go", "build", "fiber_http_metrics.go")
 	RunApp(t, "fiber_http_metrics", env...)
+}
+
+func TestBasicFiberv2RoutePattern(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_route_pattern.go")
+	RunApp(t, "fiber_route_pattern", env...)
+}
+
+func TestBasicFiberv2RouteStatic(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_route_static.go")
+	RunApp(t, "fiber_route_static", env...)
+}
+
+func TestBasicFiberv2RouteMetrics(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_route_metrics.go")
+	RunApp(t, "fiber_route_metrics", env...)
 }
