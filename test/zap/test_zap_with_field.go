@@ -50,7 +50,7 @@ func main() {
 	port, err := strconv.Atoi(Url.Port())
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", ts_a.URL, "http", "1.1", "tcp", "ipv4", "", Url.Host, 200, 0, int64(port))
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /", "GET", "http", "tcp", "ipv4", "", Url.Host, "Go-http-client/1.1", "http", "/", "", "/", 200)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET", "GET", "http", "tcp", "ipv4", "", Url.Host, "Go-http-client/1.1", "http", "/", "", verifier.OmitHttpRoute, 200)
 		if stubs[0][1].Parent.TraceID().String() != stubs[0][0].SpanContext.TraceID().String() {
 			log.Fatal("span 1 should be child of span 0")
 		}
