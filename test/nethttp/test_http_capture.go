@@ -18,6 +18,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -87,16 +88,28 @@ func main() {
 		clientSpan := stubs[0][0]
 		serverSpan := stubs[0][1]
 
-		assertHeadersAttr(clientSpan.Attributes)
 		assertMissingAttr(clientSpan.Attributes, "http.request.header.authorization")
-		assertStringAttr(clientSpan.Attributes, "http.request.body.content", captureRequestBody)
-		assertStringAttr(clientSpan.Attributes, "http.response.body.content", captureResponseBody)
+		assertCaptureAttrs(clientSpan.Attributes)
 
-		assertHeadersAttr(serverSpan.Attributes)
 		assertMissingAttr(serverSpan.Attributes, "http.request.header.authorization")
-		assertStringAttr(serverSpan.Attributes, "http.request.body.content", captureRequestBody)
-		assertStringAttr(serverSpan.Attributes, "http.response.body.content", captureResponseBody)
+		assertCaptureAttrs(serverSpan.Attributes)
 	}, 1)
+}
+
+func assertCaptureAttrs(attrs []attribute.KeyValue) {
+	if captureRequestHeadersEnabled() {
+		assertHeadersAttr(attrs)
+	} else {
+		assertMissingAttr(attrs, "http.request.headers")
+	}
+
+	if captureBodyEnabled() {
+		assertStringAttr(attrs, "http.request.body.content", captureRequestBody)
+		assertStringAttr(attrs, "http.response.body.content", captureResponseBody)
+	} else {
+		assertMissingAttr(attrs, "http.request.body.content")
+		assertMissingAttr(attrs, "http.response.body.content")
+	}
 }
 
 func assertStringAttr(attrs []attribute.KeyValue, name string, want string) {
@@ -139,4 +152,12 @@ func findAttr(attrs []attribute.KeyValue, name string) (attribute.KeyValue, bool
 		}
 	}
 	return attribute.KeyValue{}, false
+}
+
+func captureRequestHeadersEnabled() bool {
+	return strings.EqualFold(os.Getenv("OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS"), "true")
+}
+
+func captureBodyEnabled() bool {
+	return strings.EqualFold(os.Getenv("OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED"), "true")
 }

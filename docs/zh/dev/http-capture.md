@@ -220,8 +220,9 @@ HTTP rule 测试：
 建议优先跑：
 
 ```bash
-go test ./pkg/rules/http/...
-go test ./test -run NetHttp
+(cd pkg/rules/http && go test ./...)
+TEST_PLUGIN_NAME=nethttp-capture-test go test ./test -run 'TestPlugins4/nethttp-capture-test' -count=1
+TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4/nethttp-capture-disabled-test' -count=1
 ```
 
 ## 非目标

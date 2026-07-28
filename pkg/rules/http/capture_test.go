@@ -108,6 +108,37 @@ func TestCaptureHTTPRequestBodyRestoresBody(t *testing.T) {
 	}
 }
 
+func TestReadAndRestoreBodyPreservesCloser(t *testing.T) {
+	body := `{"key":"value"}`
+	original := newTrackingReadCloser(body)
+	readCloser := io.ReadCloser(original)
+
+	got, ok := readAndRestoreBody(&readCloser, defaultMaxHTTPBodyBytes)
+	if !ok {
+		t.Fatal("expected body to be captured")
+	}
+	if got != body {
+		t.Fatalf("captured body = %q, want %q", got, body)
+	}
+	if original.closed {
+		t.Fatal("original body should not be closed during capture")
+	}
+
+	restored, err := io.ReadAll(readCloser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(restored) != body {
+		t.Fatalf("restored body = %q, want %q", restored, body)
+	}
+	if err := readCloser.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !original.closed {
+		t.Fatal("restored body should close the original body")
+	}
+}
+
 func TestCaptureHTTPRequestBodySkipsUnknownLength(t *testing.T) {
 	body := `{"key":"value"}`
 	req := &http.Request{
@@ -264,4 +295,18 @@ func findAttr(attrs []attribute.KeyValue, name string) (attribute.KeyValue, bool
 		}
 	}
 	return attribute.KeyValue{}, false
+}
+
+type trackingReadCloser struct {
+	*strings.Reader
+	closed bool
+}
+
+func newTrackingReadCloser(body string) *trackingReadCloser {
+	return &trackingReadCloser{Reader: strings.NewReader(body)}
+}
+
+func (r *trackingReadCloser) Close() error {
+	r.closed = true
+	return nil
 }

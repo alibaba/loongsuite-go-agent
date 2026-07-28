@@ -104,8 +104,10 @@ func readAndRestoreBody(body *io.ReadCloser, maxBytes int64) (string, bool) {
 		return "", false
 	}
 
-	_ = original.Close()
-	*body = io.NopCloser(bytes.NewReader(data))
+	*body = &restoredReadCloser{
+		Reader: bytes.NewReader(data),
+		Closer: original,
+	}
 	if len(data) == 0 || !utf8.Valid(data) {
 		return "", false
 	}

@@ -69,7 +69,7 @@ export default {
                         { text: 'Write the Hook Code', link: '/dev/hook' },
                         { text: 'Test the Hook Code', link: '/dev/test' },
                         { text: 'Hook Rule Types', link: '/dev/rule_def' },
-                        { text: 'HTTP Capture Proposal', link: '/dev/http-capture' },
+                        { text: 'HTTP Capture', link: '/dev/http-capture' },
                     ]
                   },
                 {
@@ -113,7 +113,7 @@ export default {
                         { text: '编写Hook代码', link: '/zh/dev/hook' },
                         { text: '测试Hook代码', link: '/zh/dev/test' },
                         { text: 'Hook规则类型', link: '/zh/dev/rule_def' },
-                        { text: 'HTTP采集方案', link: '/zh/dev/http-capture' },
+                        { text: 'HTTP采集', link: '/zh/dev/http-capture' },
                     ]
                   },
                 {
