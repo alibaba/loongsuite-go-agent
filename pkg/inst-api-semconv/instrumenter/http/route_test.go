@@ -24,10 +24,13 @@ func TestRouteFromPattern(t *testing.T) {
 		expected string
 	}{
 		{"GET /users/{id}", "/users/{id}"},
+		{"GET /users/{id}/{$}", "/users/{id}/{$}"},
+		{"GET /users/{id}/", "/users/{id}/"},
 		{"/users/{id}", "/users/{id}"},
 		{"POST /query", "/query"},
 		{"/health", "/health"},
 		{"GET example.com/users/{id}", "/users/{id}"},
+		{"GET example.com/users/{id}/{$}", "/users/{id}/{$}"},
 		{"GET example.com", ""},
 		{"", ""},
 		{"GET", ""},

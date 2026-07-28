@@ -58,3 +58,24 @@ func TestRouteTemplateStaleFallbackCleared(t *testing.T) {
 		t.Fatalf("takeServerRouteTemplate() = %q, want %q", got, "/users/{id}")
 	}
 }
+
+func TestServerSpanName(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		route  string
+		want   string
+	}{
+		{name: "missing route", method: "GET", route: "", want: ""},
+		{name: "missing method", method: "", route: "/users/{id}", want: "/users/{id}"},
+		{name: "method and route", method: "GET", route: "/users/{id}", want: "GET /users/{id}"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := serverSpanName(tt.method, tt.route); got != tt.want {
+				t.Fatalf("serverSpanName(%q, %q) = %q, want %q", tt.method, tt.route, got, tt.want)
+			}
+		})
+	}
+}

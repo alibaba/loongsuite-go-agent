@@ -66,6 +66,16 @@ func main() {
 	if _, err := http.Get(base + "/fallback/foo"); err != nil {
 		panic(err)
 	}
+	req, err := http.NewRequest(http.MethodPost, base+"/users/123", nil)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.DefaultClient.Do(req); err != nil {
+		panic(err)
+	}
+	if _, err := http.Get(base + "/missing"); err != nil {
+		panic(err)
+	}
 	peer := "127.0.0.1:" + strconv.Itoa(port)
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", base+"/users/123", "http", "1.1", "tcp", "ipv4", "", peer, 200, 0, int64(port))
@@ -76,5 +86,11 @@ func main() {
 
 		verifier.VerifyHttpClientAttributes(stubs[2][0], "GET", "GET", base+"/fallback/foo", "http", "1.1", "tcp", "ipv4", "", peer, 200, 0, int64(port))
 		verifier.VerifyHttpServerAttributes(stubs[2][1], "GET", "GET", "http", "tcp", "ipv4", "", peer, "Go-http-client/1.1", "http", "/fallback/foo", "", verifier.OmitHttpRoute, 200)
-	}, 3)
+
+		verifier.VerifyHttpClientAttributes(stubs[3][0], "POST", "POST", base+"/users/123", "http", "1.1", "tcp", "ipv4", "", peer, 405, 0, int64(port))
+		verifier.VerifyHttpServerAttributes(stubs[3][1], "POST", "POST", "http", "tcp", "ipv4", "", peer, "Go-http-client/1.1", "http", "/users/123", "", verifier.OmitHttpRoute, 405)
+
+		verifier.VerifyHttpClientAttributes(stubs[4][0], "GET", "GET", base+"/missing", "http", "1.1", "tcp", "ipv4", "", peer, 404, 0, int64(port))
+		verifier.VerifyHttpServerAttributes(stubs[4][1], "GET", "GET", "http", "tcp", "ipv4", "", peer, "Go-http-client/1.1", "http", "/missing", "", verifier.OmitHttpRoute, 404)
+	}, 5)
 }

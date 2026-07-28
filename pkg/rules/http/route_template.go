@@ -66,16 +66,23 @@ func takeServerRouteTemplate(ctx context.Context, r *http.Request) string {
 // UpdateServerSpanName sets the local-root HTTP server span name to
 // "{method} {route}" per OTel HTTP semconv when a route template is available.
 func UpdateServerSpanName(method, route string) {
-	if route == "" {
+	name := serverSpanName(method, route)
+	if name == "" {
 		return
 	}
 	lcs := trace.LocalRootSpanFromGLS()
 	if lcs == nil {
 		return
 	}
-	if method == "" {
-		lcs.SetName(route)
-		return
+	lcs.SetName(name)
+}
+
+func serverSpanName(method, route string) string {
+	if route == "" {
+		return ""
 	}
-	lcs.SetName(method + " " + route)
+	if method == "" {
+		return route
+	}
+	return method + " " + route
 }
