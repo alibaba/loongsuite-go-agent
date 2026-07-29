@@ -36,8 +36,6 @@ func serverOnEnter(call api.CallContext, _ interface{}, w http.ResponseWriter, r
 	if netHttpFilter.FilterUrl(r.URL) {
 		return
 	}
-	// Clear any stale fallback entry from a prior keep-alive request reusing *r.
-	serverRouteTemplates.LoadAndDelete(r)
 	request := &netHttpRequest{
 		method:     r.Method,
 		url:        r.URL,

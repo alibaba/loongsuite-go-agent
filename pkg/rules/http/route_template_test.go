@@ -18,43 +18,29 @@ func TestRouteTemplateContainerPath(t *testing.T) {
 	}
 }
 
-func TestRouteTemplateFallbackMapPath(t *testing.T) {
+func TestRouteTemplateNoContainerIgnored(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://127.0.0.1/users/123", nil)
 
 	SetServerRouteTemplate(req, "/users/{id}")
 
-	if got := takeServerRouteTemplate(context.Background(), req); got != "/users/{id}" {
-		t.Fatalf("takeServerRouteTemplate() = %q, want %q", got, "/users/{id}")
-	}
-	// Fallback entries should be consumed once.
-	if got := takeServerRouteTemplate(context.Background(), req); got != "" {
-		t.Fatalf("takeServerRouteTemplate() second read = %q, want empty", got)
+	if got := takeServerRouteTemplate(req.Context(), req); got != "" {
+		t.Fatalf("takeServerRouteTemplate() = %q, want empty without injected container", got)
 	}
 }
 
-func TestRouteTemplateFallbackAfterContextReplacement(t *testing.T) {
+func TestRouteTemplateDroppedAfterContextReplacement(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://127.0.0.1/users/123", nil)
-	req = req.WithContext(context.WithValue(req.Context(), routeContainerKey{}, &routeTemplateContainer{}))
+	container := &routeTemplateContainer{}
+	req = req.WithContext(context.WithValue(req.Context(), routeContainerKey{}, container))
 	SetServerRouteTemplate(req, "/users/{id}")
 
-	// Simulate frameworks replacing context without preserving the route container.
+	// Context replaced without preserving values: later Set is a no-op, but the
+	// original container (still held by the instrumenter ctx) keeps the first write.
+	instrumenterCtx := req.Context()
 	req = req.WithContext(context.Background())
 	SetServerRouteTemplate(req, "/users/{id}/replaced")
 
-	if got := takeServerRouteTemplate(req.Context(), req); got != "/users/{id}/replaced" {
-		t.Fatalf("takeServerRouteTemplate() = %q, want %q", got, "/users/{id}/replaced")
-	}
-}
-
-func TestRouteTemplateStaleFallbackCleared(t *testing.T) {
-	req := httptest.NewRequest("GET", "http://127.0.0.1/users/123", nil)
-	serverRouteTemplates.Store(req, "stale-route")
-
-	// Mirrors serverOnEnter cleanup for keep-alive request pointer reuse.
-	serverRouteTemplates.LoadAndDelete(req)
-
-	SetServerRouteTemplate(req, "/users/{id}")
-	if got := takeServerRouteTemplate(context.Background(), req); got != "/users/{id}" {
+	if got := takeServerRouteTemplate(instrumenterCtx, req); got != "/users/{id}" {
 		t.Fatalf("takeServerRouteTemplate() = %q, want %q", got, "/users/{id}")
 	}
 }

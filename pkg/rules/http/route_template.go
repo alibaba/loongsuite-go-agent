@@ -17,7 +17,6 @@ package http
 import (
 	"context"
 	"net/http"
-	"sync"
 
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -28,22 +27,20 @@ type routeTemplateContainer struct {
 
 type routeContainerKey struct{}
 
-var serverRouteTemplates sync.Map
-
 // SetServerRouteTemplate stores a low-cardinality route template for the request.
 // Framework hooks call this with the underlying *http.Request before the server
 // instrumenter ends the span.
+//
+// The net/http server hook injects a mutable container into the request context.
+// Middleware that replaces r.Context() must preserve existing context values;
+// otherwise the template is silently dropped.
 func SetServerRouteTemplate(r *http.Request, route string) {
 	if r == nil || route == "" {
 		return
 	}
 	if container, ok := r.Context().Value(routeContainerKey{}).(*routeTemplateContainer); ok && container != nil {
 		container.template = route
-		return
 	}
-	// Fallback when the net/http server hook has not injected a container
-	// (or the request context was replaced without preserving values).
-	serverRouteTemplates.Store(r, route)
 }
 
 func takeServerRouteTemplate(ctx context.Context, r *http.Request) string {
@@ -55,9 +52,6 @@ func takeServerRouteTemplate(ctx context.Context, r *http.Request) string {
 	if r != nil {
 		if container, ok := r.Context().Value(routeContainerKey{}).(*routeTemplateContainer); ok && container != nil && container.template != "" {
 			return container.template
-		}
-		if v, ok := serverRouteTemplates.LoadAndDelete(r); ok {
-			return v.(string)
 		}
 	}
 	return ""
