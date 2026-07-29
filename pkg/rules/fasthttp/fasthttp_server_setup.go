@@ -34,14 +34,17 @@ func newFastHttpServerDelegateHandler(handler fasthttp.RequestHandler) fasthttp.
 			return
 		}
 		request := fastHttpRequest{
-			method: string(ctx.Method()),
-			url:    u,
-			isTls:  ctx.IsTLS(),
-			header: &ctx.Request.Header,
+			method:         string(ctx.Method()),
+			url:            u,
+			isTls:          ctx.IsTLS(),
+			header:         &ctx.Request.Header,
+			requestHeaders: captureFastHTTPRequestHeaders(&ctx.Request.Header),
+			requestBody:    captureFastHTTPRequestBody(&ctx.Request),
 		}
 		fastHttpServerInstrumenter.StartAndEnd(ctx, request, fastHttpResponse{
-			statusCode: ctx.Response.StatusCode(),
-			header:     &ctx.Response.Header,
+			statusCode:   ctx.Response.StatusCode(),
+			header:       &ctx.Response.Header,
+			responseBody: captureFastHTTPResponseBody(&ctx.Response),
 		}, ctx.Err(), startTime, time.Now())
 	}
 }

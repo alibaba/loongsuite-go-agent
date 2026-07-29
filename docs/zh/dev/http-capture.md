@@ -1,6 +1,6 @@
 # HTTP 请求头和 Body 采集方案
 
-状态：已在 `net/http` 探针实现。
+状态：已在 `net/http`、`fasthttp`、Fiber v2 和 Fiber v3 探针实现。
 
 本文记录两个 opt-in 的 HTTP 探针增强功能：
 
@@ -13,12 +13,16 @@
 
 ## 实现位置
 
-实现范围限定在 `pkg/rules/http`：
+共享的采集支撑代码位于
+`pkg/inst-api-semconv/instrumenter/http/http_capture.go`。不同框架的 hook 接入位于：
 
-- `capture_config.go` 解析环境变量；
-- `capture_body.go` 校验、读取、还原和缓冲符合条件的 body；
-- `capture_attrs_extractor.go` 将采集值写入 span attribute；
-- `client_setup.go` 和 `server_setup.go` 将采集数据接入 net/http span。
+- `pkg/rules/http`：`net/http`；
+- `pkg/rules/fasthttp`：`fasthttp`；
+- `pkg/rules/fiberv2`：Fiber v2；
+- `pkg/rules/fiberv3`：Fiber v3。
+
+基于 `net/http` 的框架，例如 Gin、Echo、chi、Gorilla/mux，会通过已有的
+`net/http` 探针路径覆盖。Fiber 通过自身基于 fasthttp 的专用 rule 覆盖。
 
 ## 环境变量
 
@@ -34,9 +38,9 @@ export OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=true
 export OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true
 ```
 
-请求头变量同时作用于 HTTP client span 和 HTTP server span 的 request headers。响应头采集
-不包含在本方案范围内。开启后会采集全部请求头，包括 `Authorization`、`Cookie` 等敏感
-header，所以除非明确需要这些数据，否则应保持默认关闭。
+请求头变量作用于已支持 HTTP 探针的 client request span 和 server request span。响应头
+采集不包含在本方案范围内。开启后会采集全部请求头，包括 `Authorization`、`Cookie` 等
+敏感 header，所以除非明确需要这些数据，否则应保持默认关闭。
 
 ## Attribute 命名
 
@@ -79,19 +83,23 @@ http.response.body.content
 - `Content-Encoding` 为空或 `identity`；
 - 采集到的字节是合法 UTF-8。
 
-对于 request body 和 HTTP client response body，第一版不建议在 hook 路径里读取未知长度
-stream。读取未知长度的 streaming body 可能阻塞业务、延迟 span 结束，或者改变网络时序。
-如果 `ContentLength < 0`，建议跳过采集，除非后续实现引入安全的 tee 方案。
+对于 `net/http` request body 和 HTTP client response body，第一版不建议在 hook 路径里
+读取未知长度 stream。读取未知长度的 streaming body 可能阻塞业务、延迟 span 结束，或者
+改变网络时序。如果 `ContentLength < 0`，建议跳过采集，除非后续实现引入安全的 tee
+方案。
 
 对于 HTTP server response body，可以在 `ResponseWriter` wrapper 中采集，因为 wrapper
 是在业务写响应时观察字节。最多缓冲 `1025` bytes；只有最终观察到的 body 长度不超过
 `1024` 时才写入 attribute。
 
-## 实现计划
+对于 `fasthttp` 和 Fiber，采集使用 `fasthttp.Request` / `fasthttp.Response` 中已经持有
+的 body bytes；超长、压缩、二进制和非 UTF-8 body 都会跳过。
+
+## 实现说明
 
 ### 配置模块
 
-新增 HTTP 局部配置模块：
+`net/http` 保留 HTTP 局部配置模块：
 
 ```text
 pkg/rules/http/capture_config.go
@@ -133,7 +141,7 @@ attribute extractor 更简单。
 
 ### Attribute Extractor
 
-新增 HTTP 专用 extractor：
+`net/http` 保留 HTTP 专用 extractor：
 
 ```text
 pkg/rules/http/capture_attrs_extractor.go
@@ -159,8 +167,8 @@ AddAttributesExtractor(existingHTTPExtractor).
 AddAttributesExtractor(newHttpCaptureAttrsExtractor(...))
 ```
 
-这样新逻辑只影响 `net/http`，不会污染其他复用通用 HTTP semantic convention extractor
-的探针。
+fasthttp 体系的 rule 使用 `pkg/inst-api-semconv/instrumenter/http` 中共享的
+`CaptureAttrsExtractor`。
 
 ### Hook 改动
 
@@ -200,6 +208,12 @@ Server response：
 
 wrapper 必须保持已有可选接口行为：`Hijacker`、`Flusher`、`Pusher`、`CloseNotifier`。
 
+fasthttp 和 Fiber：
+
+- 从 `fasthttp.Request` 采集请求头和请求体；
+- 从 `fasthttp.Response` 采集响应体；
+- 将采集值写入 fasthttp client/server span 和 Fiber server span。
+
 ## 测试计划
 
 单元测试：
@@ -213,7 +227,8 @@ wrapper 必须保持已有可选接口行为：`Hijacker`、`Flusher`、`Pusher`
 HTTP rule 测试：
 
 - 在 `pkg/rules/http` 增加 capture extractor 和 body helper 的测试；
-- 扩展 `test/nethttp`，或新增聚焦 fixture，发送 JSON/text 请求体和响应体；
+- 扩展 `test/nethttp`、`test/fasthttp`、`test/fiberv2` 和 `test/fiberv3`，发送 JSON
+  请求体和响应体；
 - 验证关闭/开启环境变量时 attributes 的差异；
 - 验证大 body 不被采集，并且业务代码仍能读取原始 body。
 
@@ -221,8 +236,15 @@ HTTP rule 测试：
 
 ```bash
 (cd pkg/rules/http && go test ./...)
+(cd pkg && go test ./inst-api-semconv/instrumenter/http)
 TEST_PLUGIN_NAME=nethttp-capture-test go test ./test -run 'TestPlugins4/nethttp-capture-test' -count=1
 TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4/nethttp-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fasthttp-capture-test go test ./test -run 'TestPlugins4/fasthttp-capture-test' -count=1
+TEST_PLUGIN_NAME=fasthttp-capture-disabled-test go test ./test -run 'TestPlugins4/fasthttp-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fiberv2-capture-test go test ./test -run 'TestPlugins4/fiberv2-capture-test' -count=1
+TEST_PLUGIN_NAME=fiberv2-capture-disabled-test go test ./test -run 'TestPlugins4/fiberv2-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fiberv3-capture-test go test ./test -run 'TestPlugins4/fiberv3-capture-test' -count=1
+TEST_PLUGIN_NAME=fiberv3-capture-disabled-test go test ./test -run 'TestPlugins4/fiberv3-capture-disabled-test' -count=1
 ```
 
 ## 非目标
@@ -231,4 +253,5 @@ TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4
 - 本次不采集响应头。
 - 不采集二进制、压缩或非 UTF-8 body。
 - 不改变现有 HTTP span name、status extraction、propagation 或 metrics。
-- 在 OpenTelemetry 有稳定约定前，不把 body content 放进通用 semantic convention 包。
+- 在 OpenTelemetry 有稳定约定前，不把 body content 提升为 OpenTelemetry semantic
+  convention attribute。

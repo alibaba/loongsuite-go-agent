@@ -24,6 +24,8 @@ func init() {
 		NewGeneralTestCase("basic-fiberv3-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3),
 		NewGeneralTestCase("basic-fiberv3s-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3Https),
 		NewGeneralTestCase("basic-fiberv3-metrics-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3Metrics),
+		NewGeneralTestCase("fiberv3-capture-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestFiberv3Capture),
+		NewGeneralTestCase("fiberv3-capture-disabled-test", fiberv3_module_name, "v3.0.0", "", "1.25", "", TestFiberv3CaptureDisabled),
 		NewLatestDepthTestCase("fiberv3-latestdepth", fiberv3_dependency_name, fiberv3_module_name, "v3.0.0", "", "1.25", "", TestBasicFiberv3),
 		// Custom-ctx apps route through (*App).customRequestHandler on fiber
 		// >= v3.3.0; run it as a latest-depth test so it exercises that path.
@@ -53,4 +55,24 @@ func TestBasicFiberv3CustomCtx(t *testing.T, env ...string) {
 	UseApp("fiberv3/v3.0.0")
 	RunGoBuild(t, "go", "build", "fiber_custom_ctx.go")
 	RunApp(t, "fiber_custom_ctx", env...)
+}
+
+func TestFiberv3Capture(t *testing.T, env ...string) {
+	UseApp("fiberv3/v3.0.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=true",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
+}
+
+func TestFiberv3CaptureDisabled(t *testing.T, env ...string) {
+	UseApp("fiberv3/v3.0.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
 }

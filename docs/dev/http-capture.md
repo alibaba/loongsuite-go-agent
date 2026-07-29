@@ -1,6 +1,6 @@
 # HTTP Header and Body Capture
 
-Status: implemented for `net/http`.
+Status: implemented for `net/http`, `fasthttp`, Fiber v2, and Fiber v3.
 
 This document records two opt-in HTTP instrumentation features:
 
@@ -13,12 +13,18 @@ unchanged.
 
 ## Implementation
 
-The implementation is scoped to `pkg/rules/http`:
+The shared capture support is implemented in
+`pkg/inst-api-semconv/instrumenter/http/http_capture.go`. Framework-specific
+hook integration is implemented in:
 
-- `capture_config.go` parses environment variables;
-- `capture_body.go` validates, reads, restores, and buffers eligible bodies;
-- `capture_attrs_extractor.go` writes captured values to span attributes;
-- `client_setup.go` and `server_setup.go` attach capture data to net/http spans.
+- `pkg/rules/http` for `net/http`;
+- `pkg/rules/fasthttp` for `fasthttp`;
+- `pkg/rules/fiberv2` for Fiber v2;
+- `pkg/rules/fiberv3` for Fiber v3.
+
+Frameworks built on top of `net/http`, such as Gin, Echo, chi, and
+Gorilla/mux, are covered through the existing `net/http` instrumentation path.
+Fiber is covered through its dedicated fasthttp-based rule.
 
 ## Environment Variables
 
@@ -34,10 +40,11 @@ export OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=true
 export OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true
 ```
 
-The header variable applies to both client request spans and server request
-spans. Response header capture is out of scope. When enabled, all request
-headers are serialized, including sensitive headers such as `Authorization` and
-`Cookie`, so keep the default disabled unless this data is explicitly needed.
+The header variable applies to client request spans and server request spans for
+the supported HTTP instrumentations. Response header capture is out of scope.
+When enabled, all request headers are serialized, including sensitive headers
+such as `Authorization` and `Cookie`, so keep the default disabled unless this
+data is explicitly needed.
 
 ## Attribute Names
 
@@ -82,22 +89,26 @@ A body is eligible only when all conditions below are true:
 - `Content-Encoding` is empty or `identity`;
 - the captured bytes are valid UTF-8.
 
-For request bodies and client response bodies, prefer not to read unknown-length
-streams in the hook path. Reading an unknown streaming body can block the
-application, delay span completion, or change network timing. If `ContentLength`
-is negative, skip capture unless a later implementation introduces a safe
-tee-based design.
+For `net/http` request bodies and client response bodies, prefer not to read
+unknown-length streams in the hook path. Reading an unknown streaming body can
+block the application, delay span completion, or change network timing. If
+`ContentLength` is negative, skip capture unless a later implementation
+introduces a safe tee-based design.
 
 For server response bodies, capture can be done in the `ResponseWriter` wrapper
 because bytes are observed while the application writes them. Buffer at most
 `1025` bytes; record the body only when the final observed length is at most
 `1024`.
 
-## Implementation Plan
+For `fasthttp` and Fiber, capture uses the body bytes already held by
+`fasthttp.Request`/`fasthttp.Response`; oversized, compressed, binary, and
+non-UTF-8 bodies are skipped.
+
+## Implementation Notes
 
 ### Configuration
 
-Add a small HTTP-local configuration module:
+`net/http` keeps a small HTTP-local configuration module:
 
 ```text
 pkg/rules/http/capture_config.go
@@ -140,7 +151,7 @@ retaining large buffers and makes the attribute extractor straightforward.
 
 ### Attribute Extractor
 
-Add an HTTP-specific extractor:
+`net/http` keeps an HTTP-specific extractor:
 
 ```text
 pkg/rules/http/capture_attrs_extractor.go
@@ -167,8 +178,8 @@ AddAttributesExtractor(existingHTTPExtractor).
 AddAttributesExtractor(newHttpCaptureAttrsExtractor(...))
 ```
 
-This keeps the new behavior local to net/http and avoids changing the generic
-HTTP semantic convention extractor used by other instrumentations.
+The fasthttp-based rules use the shared `CaptureAttrsExtractor` from
+`pkg/inst-api-semconv/instrumenter/http`.
 
 ### Hook Changes
 
@@ -217,6 +228,12 @@ Server response:
 The wrapper must keep the existing optional interfaces working: `Hijacker`,
 `Flusher`, `Pusher`, and `CloseNotifier`.
 
+fasthttp and Fiber:
+
+- Capture request headers and request bodies from `fasthttp.Request`.
+- Capture response bodies from `fasthttp.Response`.
+- Attach captured values to fasthttp client/server spans and Fiber server spans.
+
 ## Tests
 
 Unit tests:
@@ -231,8 +248,8 @@ Unit tests:
 HTTP rule tests:
 
 - add tests under `pkg/rules/http` for the capture extractor and body helpers;
-- extend `test/nethttp` or add a focused fixture that sends JSON/text request and
-  response bodies;
+- extend `test/nethttp`, `test/fasthttp`, `test/fiberv2`, and `test/fiberv3`
+  with focused fixtures that send JSON request and response bodies;
 - verify the attributes with capture disabled and enabled;
 - verify that large bodies are not captured and that application code can still
   read the original body.
@@ -241,8 +258,15 @@ Suggested focused commands:
 
 ```bash
 (cd pkg/rules/http && go test ./...)
+(cd pkg && go test ./inst-api-semconv/instrumenter/http)
 TEST_PLUGIN_NAME=nethttp-capture-test go test ./test -run 'TestPlugins4/nethttp-capture-test' -count=1
 TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4/nethttp-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fasthttp-capture-test go test ./test -run 'TestPlugins4/fasthttp-capture-test' -count=1
+TEST_PLUGIN_NAME=fasthttp-capture-disabled-test go test ./test -run 'TestPlugins4/fasthttp-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fiberv2-capture-test go test ./test -run 'TestPlugins4/fiberv2-capture-test' -count=1
+TEST_PLUGIN_NAME=fiberv2-capture-disabled-test go test ./test -run 'TestPlugins4/fiberv2-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=fiberv3-capture-test go test ./test -run 'TestPlugins4/fiberv3-capture-test' -count=1
+TEST_PLUGIN_NAME=fiberv3-capture-disabled-test go test ./test -run 'TestPlugins4/fiberv3-capture-disabled-test' -count=1
 ```
 
 ## Non-goals
@@ -252,5 +276,5 @@ TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4
 - Do not capture binary, compressed, or non-UTF-8 bodies.
 - Do not change existing HTTP span names, status extraction, propagation, or
   metrics.
-- Do not add body content to OpenTelemetry semantic convention packages until a
-  stable convention exists.
+- Do not promote body content to OpenTelemetry semantic convention attributes
+  until a stable convention exists.

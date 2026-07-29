@@ -40,10 +40,12 @@ func clientFastHttpOnEnter(call api.CallContext, c *fasthttp.HostClient, req *fa
 		return
 	}
 	request := fastHttpRequest{
-		method: string(req.Header.Method()),
-		url:    u,
-		isTls:  isTLS,
-		header: &req.Header,
+		method:         string(req.Header.Method()),
+		url:            u,
+		isTls:          isTLS,
+		header:         &req.Header,
+		requestHeaders: captureFastHTTPRequestHeaders(&req.Header),
+		requestBody:    captureFastHTTPRequestBody(req),
 	}
 	ctx := fastHttpClientInstrumenter.Start(context.Background(), request)
 	data := make(map[string]interface{}, 3)
@@ -63,7 +65,8 @@ func clientFastHttpOnExit(call api.CallContext, err error) {
 	request := data["request"].(fastHttpRequest)
 	resp := data["response"].(*fasthttp.Response)
 	fastHttpClientInstrumenter.End(ctx, request, fastHttpResponse{
-		statusCode: resp.StatusCode(),
-		header:     &resp.Header,
+		statusCode:   resp.StatusCode(),
+		header:       &resp.Header,
+		responseBody: captureFastHTTPResponseBody(resp),
 	}, err)
 }

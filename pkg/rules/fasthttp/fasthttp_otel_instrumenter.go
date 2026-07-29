@@ -215,7 +215,10 @@ func BuildFastHttpClientOtelInstrumenter() *instrumenter.PropagatingToDownstream
 			Name:    utils.FAST_HTTP_CLIENT_SCOPE_NAME,
 			Version: version.Tag,
 		}).
-		AddAttributesExtractor(&http.HttpClientAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpClientAttrsGetter, fastHttpClientAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor}).BuildPropagatingToDownstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
+		AddAttributesExtractor(
+			&http.HttpClientAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpClientAttrsGetter, fastHttpClientAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor},
+			&http.CaptureAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpCaptureAttrsGetter]{Getter: fastHttpCaptureAttrsGetter{}},
+		).BuildPropagatingToDownstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
 		return fastHttpRequestCarrier{req: n.header}
 	}, otel.GetTextMapPropagator())
 }
@@ -232,7 +235,10 @@ func BuildFastHttpServerOtelInstrumenter() *instrumenter.PropagatingFromUpstream
 			Name:    utils.FAST_HTTP_SERVER_SCOPE_NAME,
 			Version: version.Tag,
 		}).
-		AddAttributesExtractor(&http.HttpServerAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor}).BuildPropagatingFromUpstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
+		AddAttributesExtractor(
+			&http.HttpServerAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor},
+			&http.CaptureAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpCaptureAttrsGetter]{Getter: fastHttpCaptureAttrsGetter{}},
+		).BuildPropagatingFromUpstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
 		return fastHttpRequestCarrier{req: n.header}
 	}, otel.GetTextMapPropagator())
 }
