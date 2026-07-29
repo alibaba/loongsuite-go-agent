@@ -28,8 +28,10 @@ import (
 
 const (
 	CaptureRequestHeadersEnv = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS"
+	CaptureAllHeadersEnv     = "LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS"
 	CaptureBodyEnabledEnv    = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED"
 	DefaultMaxCaptureBytes   = int64(1024)
+	DefaultMaxHeadersBytes   = 4096
 
 	RequestHeadersAttr      = "http.request.headers"
 	RequestBodyContentAttr  = "http.request.body.content"
@@ -38,22 +40,35 @@ const (
 
 type CaptureConfig struct {
 	CaptureRequestHeaders bool
+	CaptureAllHeaders     bool
 	CaptureBody           bool
 	MaxBodyBytes          int64
+	MaxHeadersBytes       int
+	RequestHeaderNames    map[string]struct{}
 }
 
 func NewCaptureConfigFromEnv() CaptureConfig {
-	return NewCaptureConfig(
+	return NewCaptureConfigWithAllHeaders(
 		os.Getenv(CaptureRequestHeadersEnv),
+		os.Getenv(CaptureAllHeadersEnv),
 		os.Getenv(CaptureBodyEnabledEnv),
 	)
 }
 
 func NewCaptureConfig(headersValue, bodyValue string) CaptureConfig {
+	return NewCaptureConfigWithAllHeaders(headersValue, "", bodyValue)
+}
+
+func NewCaptureConfigWithAllHeaders(headersValue, allHeadersValue, bodyValue string) CaptureConfig {
+	requestHeaderNames := ParseCaptureHeaderNames(headersValue)
+	captureAllHeaders := strings.EqualFold(strings.TrimSpace(allHeadersValue), "true")
 	return CaptureConfig{
-		CaptureRequestHeaders: strings.EqualFold(strings.TrimSpace(headersValue), "true"),
+		CaptureRequestHeaders: len(requestHeaderNames) > 0 || captureAllHeaders,
+		CaptureAllHeaders:     captureAllHeaders,
 		CaptureBody:           strings.EqualFold(strings.TrimSpace(bodyValue), "true"),
 		MaxBodyBytes:          DefaultMaxCaptureBytes,
+		MaxHeadersBytes:       DefaultMaxHeadersBytes,
+		RequestHeaderNames:    requestHeaderNames,
 	}
 }
 
@@ -64,7 +79,7 @@ func (c CaptureConfig) CaptureHeaders(visit func(func(name string, value string)
 	captured := map[string][]string{}
 	visit(func(name string, value string) {
 		normalized := NormalizeCaptureHeaderName(name)
-		if normalized == "" {
+		if normalized == "" || !c.ShouldCaptureHeader(normalized) {
 			return
 		}
 		captured[normalized] = append(captured[normalized], value)
@@ -76,7 +91,35 @@ func (c CaptureConfig) CaptureHeaders(visit func(func(name string, value string)
 	if err != nil {
 		return ""
 	}
+	if c.MaxHeadersBytes <= 0 || len(data) > c.MaxHeadersBytes {
+		return ""
+	}
 	return string(data)
+}
+
+func ParseCaptureHeaderNames(value string) map[string]struct{} {
+	names := map[string]struct{}{}
+	for _, name := range strings.Split(value, ",") {
+		normalized := NormalizeCaptureHeaderName(name)
+		if normalized == "" {
+			continue
+		}
+		names[normalized] = struct{}{}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return names
+}
+
+func (c CaptureConfig) ShouldCaptureHeader(normalized string) bool {
+	if _, ok := c.RequestHeaderNames[normalized]; ok {
+		return true
+	}
+	if !c.CaptureAllHeaders {
+		return false
+	}
+	return !IsSensitiveCaptureHeader(normalized)
 }
 
 func (c CaptureConfig) CaptureBodyContent(body []byte, contentType string, contentEncoding string, detectContentType bool) string {
@@ -97,6 +140,20 @@ func (c CaptureConfig) CaptureBodyContent(body []byte, contentType string, conte
 
 func NormalizeCaptureHeaderName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
+}
+
+func IsSensitiveCaptureHeader(normalized string) bool {
+	switch normalized {
+	case "authorization",
+		"cookie",
+		"proxy-authorization",
+		"set-cookie",
+		"x-api-key",
+		"x-access-token":
+		return true
+	default:
+		return false
+	}
 }
 
 func IsTextOrJSONCaptureContentType(contentType string) bool {

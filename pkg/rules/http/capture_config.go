@@ -23,30 +23,41 @@ import (
 
 const (
 	httpCaptureRequestHeadersEnv = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS"
+	httpCaptureAllHeadersEnv     = "LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS"
 	httpCaptureBodyEnabledEnv    = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED"
 	defaultMaxHTTPBodyBytes      = int64(1024)
+	defaultMaxHTTPHeadersBytes   = 4096
 )
 
 var netHttpCaptureConfig = newHTTPCaptureConfigFromEnv()
 
 type httpCaptureConfig struct {
 	captureRequestHeaders bool
+	captureAllHeaders     bool
 	captureBody           bool
 	maxBodyBytes          int64
+	maxHeadersBytes       int
+	requestHeaderNames    map[string]struct{}
 }
 
 func newHTTPCaptureConfigFromEnv() httpCaptureConfig {
 	return newHTTPCaptureConfig(
 		os.Getenv(httpCaptureRequestHeadersEnv),
+		os.Getenv(httpCaptureAllHeadersEnv),
 		os.Getenv(httpCaptureBodyEnabledEnv),
 	)
 }
 
-func newHTTPCaptureConfig(headersValue, bodyValue string) httpCaptureConfig {
+func newHTTPCaptureConfig(headersValue, allHeadersValue, bodyValue string) httpCaptureConfig {
+	requestHeaderNames := parseCaptureHeaderNames(headersValue)
+	captureAllHeaders := strings.EqualFold(strings.TrimSpace(allHeadersValue), "true")
 	return httpCaptureConfig{
-		captureRequestHeaders: strings.EqualFold(strings.TrimSpace(headersValue), "true"),
+		captureRequestHeaders: len(requestHeaderNames) > 0 || captureAllHeaders,
+		captureAllHeaders:     captureAllHeaders,
 		captureBody:           strings.EqualFold(strings.TrimSpace(bodyValue), "true"),
 		maxBodyBytes:          defaultMaxHTTPBodyBytes,
+		maxHeadersBytes:       defaultMaxHTTPHeadersBytes,
+		requestHeaderNames:    requestHeaderNames,
 	}
 }
 
@@ -57,7 +68,7 @@ func (c httpCaptureConfig) captureHeaders(header http.Header) string {
 	captured := make(map[string][]string, len(header))
 	for name, values := range header {
 		normalized := normalizeHeaderName(name)
-		if normalized == "" {
+		if normalized == "" || !c.shouldCaptureHeader(normalized) {
 			continue
 		}
 		captured[normalized] = append([]string(nil), values...)
@@ -69,9 +80,51 @@ func (c httpCaptureConfig) captureHeaders(header http.Header) string {
 	if err != nil {
 		return ""
 	}
+	if c.maxHeadersBytes <= 0 || len(data) > c.maxHeadersBytes {
+		return ""
+	}
 	return string(data)
+}
+
+func parseCaptureHeaderNames(value string) map[string]struct{} {
+	names := map[string]struct{}{}
+	for _, name := range strings.Split(value, ",") {
+		normalized := normalizeHeaderName(name)
+		if normalized == "" {
+			continue
+		}
+		names[normalized] = struct{}{}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return names
+}
+
+func (c httpCaptureConfig) shouldCaptureHeader(normalized string) bool {
+	if _, ok := c.requestHeaderNames[normalized]; ok {
+		return true
+	}
+	if !c.captureAllHeaders {
+		return false
+	}
+	return !isSensitiveCaptureHeader(normalized)
 }
 
 func normalizeHeaderName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
+}
+
+func isSensitiveCaptureHeader(normalized string) bool {
+	switch normalized {
+	case "authorization",
+		"cookie",
+		"proxy-authorization",
+		"set-cookie",
+		"x-api-key",
+		"x-access-token":
+		return true
+	default:
+		return false
+	}
 }

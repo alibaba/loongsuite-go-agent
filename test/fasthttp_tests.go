@@ -45,7 +45,8 @@ func TestFastHttpCapture(t *testing.T, env ...string) {
 	UseApp("fasthttp/v1.45.0")
 	RunGoBuild(t, "go", "build", "test_capture.go")
 	envs := append([]string{
-		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=true",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
 		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
 	}, env...)
 	RunApp(t, "test_capture", envs...)
@@ -55,7 +56,8 @@ func TestFastHttpCaptureDisabled(t *testing.T, env ...string) {
 	UseApp("fasthttp/v1.45.0")
 	RunGoBuild(t, "go", "build", "test_capture.go")
 	envs := append([]string{
-		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
 		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
 	}, env...)
 	RunApp(t, "test_capture", envs...)

@@ -117,12 +117,18 @@ func assertHeadersAttr(attrs []attribute.KeyValue) {
 	value := headers.Value.AsString()
 	assertContains(value, `"content-type":["application/json"]`)
 	assertContains(value, `"x-request-id":["`+captureRequestID+`"]`)
-	assertContains(value, `"authorization":["secret"]`)
+	assertNotContains(value, "authorization")
 }
 
 func assertContains(value string, want string) {
 	if !strings.Contains(value, want) {
 		log.Fatalf("%q should contain %q", value, want)
+	}
+}
+
+func assertNotContains(value string, want string) {
+	if strings.Contains(value, want) {
+		log.Fatalf("%q should not contain %q", value, want)
 	}
 }
 
@@ -142,7 +148,16 @@ func findAttr(attrs []attribute.KeyValue, name string) (attribute.KeyValue, bool
 }
 
 func captureRequestHeadersEnabled() bool {
-	return strings.EqualFold(os.Getenv("OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS"), "true")
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS")), "true") {
+		return true
+	}
+	for _, name := range strings.Split(os.Getenv("OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS"), ",") {
+		switch strings.ToLower(strings.TrimSpace(name)) {
+		case "content-type", "x-request-id", "authorization":
+			return true
+		}
+	}
+	return false
 }
 
 func captureBodyEnabled() bool {

@@ -17,16 +17,34 @@ package http
 import "testing"
 
 func TestCaptureConfigCaptureHeaders(t *testing.T) {
-	config := NewCaptureConfig("true", "false")
+	config := NewCaptureConfig("content-type,x-request-id,authorization", "false")
 
 	captured := config.CaptureHeaders(func(add func(name string, value string)) {
 		add("Content-Type", "application/json")
 		add("X-Request-Id", "request-id")
 		add("Authorization", "secret")
 		add("X-Request-Id", "request-id-2")
+		add("Other", "skip")
 	})
 
 	want := `{"authorization":["secret"],"content-type":["application/json"],"x-request-id":["request-id","request-id-2"]}`
+	if captured != want {
+		t.Fatalf("captured headers = %q, want %q", captured, want)
+	}
+}
+
+func TestCaptureConfigCaptureAllHeadersSkipsSensitiveByDefault(t *testing.T) {
+	config := NewCaptureConfigWithAllHeaders("", "true", "false")
+
+	captured := config.CaptureHeaders(func(add func(name string, value string)) {
+		add("Content-Type", "application/json")
+		add("X-Request-Id", "request-id")
+		add("Authorization", "secret")
+		add("Cookie", "session")
+		add("X-Api-Key", "secret")
+	})
+
+	want := `{"content-type":["application/json"],"x-request-id":["request-id"]}`
 	if captured != want {
 		t.Fatalf("captured headers = %q, want %q", captured, want)
 	}
@@ -44,8 +62,46 @@ func TestCaptureConfigSkipsHeadersByDefault(t *testing.T) {
 	}
 }
 
+func TestCaptureConfigSkipsOversizedHeaders(t *testing.T) {
+	config := NewCaptureConfig("content-type,x-request-id", "false")
+	config.MaxHeadersBytes = 10
+
+	captured := config.CaptureHeaders(func(add func(name string, value string)) {
+		add("Content-Type", "application/json")
+		add("X-Request-Id", "request-id")
+	})
+
+	if captured != "" {
+		t.Fatalf("captured headers = %q, want empty", captured)
+	}
+}
+
+func TestNewCaptureConfigFromEnv(t *testing.T) {
+	t.Setenv(CaptureRequestHeadersEnv, " Content-Type, X-Request-Id ")
+	t.Setenv(CaptureAllHeadersEnv, " TRUE ")
+	t.Setenv(CaptureBodyEnabledEnv, "yes")
+
+	config := NewCaptureConfigFromEnv()
+
+	if !config.CaptureRequestHeaders {
+		t.Fatal("expected request header capture to be enabled")
+	}
+	if !config.CaptureAllHeaders {
+		t.Fatal("expected capture-all headers to be enabled")
+	}
+	if config.CaptureBody {
+		t.Fatal("expected body capture to be disabled")
+	}
+	if _, ok := config.RequestHeaderNames["content-type"]; !ok {
+		t.Fatal("expected content-type to be allow-listed")
+	}
+	if _, ok := config.RequestHeaderNames["x-request-id"]; !ok {
+		t.Fatal("expected x-request-id to be allow-listed")
+	}
+}
+
 func TestCaptureConfigCaptureBodyContent(t *testing.T) {
-	config := NewCaptureConfig("false", "true")
+	config := NewCaptureConfig("", "true")
 
 	tests := []struct {
 		name              string

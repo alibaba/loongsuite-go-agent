@@ -4,7 +4,7 @@
 
 本文记录两个 opt-in 的 HTTP 探针增强功能：
 
-- 将全部请求头采集到一个 HTTP span attribute；
+- 将配置的请求头采集到一个 HTTP span attribute；
 - 当请求体/响应体是 text 或 JSON，且长度不超过 1 KiB 时，将 body 内容采集到 HTTP
   span attribute。
 
@@ -28,19 +28,25 @@
 
 | 环境变量 | 默认值 | 含义 |
 | --- | --- | --- |
-| `OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS` | `false` | 设置为 `true` 时，将全部 HTTP 请求头采集到一个 attribute。 |
+| `OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS` | 空 | 逗号分隔的请求头 allow-list，匹配的请求头会采集到一个 attribute。 |
+| `LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS` | `false` | LoongSuite 私有 boolean 开关。设置为 `true` 时，采集未显式 allow-list 的非敏感请求头。 |
 | `OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED` | `false` | 设置为 `true` 时，采集符合条件的请求体和响应体。 |
 
 示例：
 
 ```bash
-export OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=true
+export OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id
 export OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true
 ```
 
 请求头变量作用于已支持 HTTP 探针的 client request span 和 server request span。响应头
-采集不包含在本方案范围内。开启后会采集全部请求头，包括 `Authorization`、`Cookie` 等
-敏感 header，所以除非明确需要这些数据，否则应保持默认关闭。
+采集不包含在本方案范围内。OTel 标准请求头变量使用 allow-list 语义，header 名称会在
+去除首尾空格后按大小写不敏感方式匹配。
+
+如果设置 `LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=true`，还会采集未出现在 allow-list
+中的请求头，但默认跳过常见敏感 header：`Authorization`、`Cookie`、`Set-Cookie`、
+`Proxy-Authorization`、`X-Api-Key` 和 `X-Access-Token`。敏感 header 只有在显式写入
+`OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS` 时才会被采集。
 
 ## Attribute 命名
 
@@ -58,6 +64,8 @@ http.request.headers = {"content-type":["application/json"],"x-request-id":["abc
 
 这里有意不使用 OpenTelemetry 的 `http.request.header.<name>` 约定，避免开启功能后为一次
 请求扩展出很多不同的 attribute 名。
+
+序列化后的 header JSON 超过 `4096` bytes 时，会省略该 attribute。
 
 Body 内容目前没有稳定的 OpenTelemetry semantic convention attribute，因此使用项目私有
 attribute：
@@ -110,13 +118,18 @@ pkg/rules/http/capture_config.go
 ```go
 type httpCaptureConfig struct {
 	captureRequestHeaders bool
+	captureAllHeaders     bool
 	captureBody          bool
 	maxBodyBytes         int64
+	maxHeadersBytes      int
+	requestHeaderNames   map[string]struct{}
 }
 ```
 
-两个环境变量在 package 初始化时解析一次。请求头采集是 boolean 开关，只有值为 `true`
-时启用，其他值都保持关闭。开启后将完整 request header map 序列化为 JSON，并写入一个
+环境变量在 package 初始化时解析一次。`OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS`
+使用 allow-list 语义。LoongSuite 私有的 capture-all 开关是可选能力，默认关闭。开启
+capture-all 时，除非敏感 header 被显式 allow-list，否则默认跳过。最终将选中的 request
+header 序列化为 JSON 并写入一个 attribute；序列化结果超过 4096 bytes 时省略该
 attribute。
 
 ### 数据结构
@@ -175,7 +188,7 @@ fasthttp 体系的 rule 使用 `pkg/inst-api-semconv/instrumenter/http` 中共�
 Client request：
 
 - 修改 `pkg/rules/http/client_setup.go` 的 `clientOnEnter`。
-- boolean 开启时，从 `req.Header` 采集全部请求头。
+- allow-list 或 capture-all 开启时，从 `req.Header` 采集配置匹配的请求头。
 - 仅当 `req.Body != nil`、content type 符合条件、content length 已知且 `<= 1024`、
   content encoding 为空或 `identity` 时采集 request body。
 - 读取后必须还原 `req.Body`，保证业务行为不变。
@@ -192,7 +205,7 @@ Client response：
 Server request：
 
 - 修改 `pkg/rules/http/server_setup.go` 的 `serverOnEnter`。
-- boolean 开启时，从 `r.Header` 采集全部请求头。
+- allow-list 或 capture-all 开启时，从 `r.Header` 采集配置匹配的请求头。
 - request body 的采集条件与 client request 一致。
 - 读取后必须还原 `r.Body`。
 
@@ -218,10 +231,12 @@ fasthttp 和 Fiber：
 
 单元测试：
 
-- boolean 请求头采集配置解析；
-- header 名称规范化，并将完整 header map 序列化为一个 JSON attribute；
+- 请求头 allow-list、capture-all 开关和 body 采集配置解析；
+- header 名称规范化，并将选中的 header map 序列化为一个 JSON attribute；
+- capture-all 模式默认跳过敏感 header，除非显式 allow-list；
+- 超过大小上限的 header JSON attribute 会被跳过；
 - content type 判断；
-- 小 body 的读取和还原；
+- 小 body 的读取和还原，包括 `req.GetBody` 路径；
 - 大 body、压缩 body、二进制 body、非 UTF-8 body、未知长度 body 的跳过逻辑。
 
 HTTP rule 测试：
@@ -230,6 +245,7 @@ HTTP rule 测试：
 - 扩展 `test/nethttp`、`test/fasthttp`、`test/fiberv2` 和 `test/fiberv3`，发送 JSON
   请求体和响应体；
 - 验证关闭/开启环境变量时 attributes 的差异；
+- 验证 headers-only 和 body-only 两种环境变量组合；
 - 验证大 body 不被采集，并且业务代码仍能读取原始 body。
 
 建议优先跑：
@@ -239,6 +255,8 @@ HTTP rule 测试：
 (cd pkg && go test ./inst-api-semconv/instrumenter/http)
 TEST_PLUGIN_NAME=nethttp-capture-test go test ./test -run 'TestPlugins4/nethttp-capture-test' -count=1
 TEST_PLUGIN_NAME=nethttp-capture-disabled-test go test ./test -run 'TestPlugins4/nethttp-capture-disabled-test' -count=1
+TEST_PLUGIN_NAME=nethttp-capture-headers-only-test go test ./test -run 'TestPlugins4/nethttp-capture-headers-only-test' -count=1
+TEST_PLUGIN_NAME=nethttp-capture-body-only-test go test ./test -run 'TestPlugins4/nethttp-capture-body-only-test' -count=1
 TEST_PLUGIN_NAME=fasthttp-capture-test go test ./test -run 'TestPlugins4/fasthttp-capture-test' -count=1
 TEST_PLUGIN_NAME=fasthttp-capture-disabled-test go test ./test -run 'TestPlugins4/fasthttp-capture-disabled-test' -count=1
 TEST_PLUGIN_NAME=fiberv2-capture-test go test ./test -run 'TestPlugins4/fiberv2-capture-test' -count=1
