@@ -164,15 +164,18 @@ func TestCaptureHTTPRequestBodyRestoresBody(t *testing.T) {
 }
 
 func TestCaptureHTTPRequestBodyUsesGetBody(t *testing.T) {
-	body := `{"key":"value"}`
+	liveBody := `{"source":"live"}`
+	getBody := `{"source":"get-body"}`
+	getBodyCalls := 0
 	req := &http.Request{
 		Header:        http.Header{},
-		Body:          io.NopCloser(strings.NewReader(body)),
-		ContentLength: int64(len(body)),
+		Body:          io.NopCloser(strings.NewReader(liveBody)),
+		ContentLength: int64(len(liveBody)),
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(strings.NewReader(body)), nil
+		getBodyCalls++
+		return io.NopCloser(strings.NewReader(getBody)), nil
 	}
 	config := httpCaptureConfig{captureBody: true, maxBodyBytes: defaultMaxHTTPBodyBytes}
 
@@ -182,16 +185,20 @@ func TestCaptureHTTPRequestBodyUsesGetBody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got != body {
-		t.Fatalf("captured body = %q, want %q", got, body)
+	if getBodyCalls != 1 {
+		t.Fatalf("GetBody calls = %d, want 1", getBodyCalls)
 	}
-	if string(restored) != body {
+	if got != getBody {
+		t.Fatalf("captured body = %q, want %q", got, getBody)
+	}
+	if string(restored) != liveBody {
 		t.Fatalf("live body should remain readable, got %q", restored)
 	}
 }
 
 func TestCaptureHTTPRequestBodySkipsGetBodyError(t *testing.T) {
 	body := `{"key":"value"}`
+	getBodyCalls := 0
 	req := &http.Request{
 		Header:        http.Header{},
 		Body:          io.NopCloser(strings.NewReader(body)),
@@ -199,6 +206,7 @@ func TestCaptureHTTPRequestBodySkipsGetBodyError(t *testing.T) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.GetBody = func() (io.ReadCloser, error) {
+		getBodyCalls++
 		return nil, errors.New("get body failed")
 	}
 	config := httpCaptureConfig{captureBody: true, maxBodyBytes: defaultMaxHTTPBodyBytes}
@@ -211,6 +219,9 @@ func TestCaptureHTTPRequestBodySkipsGetBodyError(t *testing.T) {
 
 	if got != "" {
 		t.Fatalf("captured body = %q, want empty", got)
+	}
+	if getBodyCalls != 1 {
+		t.Fatalf("GetBody calls = %d, want 1", getBodyCalls)
 	}
 	if string(restored) != body {
 		t.Fatalf("live body should remain readable, got %q", restored)
