@@ -17,6 +17,7 @@ package goredis
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/db"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/instrumenter"
@@ -106,7 +107,7 @@ func getRedisV9Statement(cmd redis.Cmder) string {
 		b = redisV9AppendArg(b, cmd)
 	}
 
-	return redisV9String(b)
+	return strings.ToValidUTF8(redisV9String(b), "\uFFFD")
 }
 
 func redisV9String(b []byte) string {
@@ -176,6 +177,10 @@ func redisV9AppendArg(b []byte, v interface{}) []byte {
 	case time.Time:
 		return v.AppendFormat(b, time.RFC3339Nano)
 	default:
-		return append(b, fmt.Sprint(v)...)
+		s := fmt.Sprint(v)
+		if !utf8.ValidString(s) {
+			s = strings.ToValidUTF8(s, "\uFFFD")
+		}
+		return append(b, s...)
 	}
 }
