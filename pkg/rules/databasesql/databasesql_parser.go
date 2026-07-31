@@ -29,6 +29,11 @@ func parseDSN(driverName, dsn string) (addr string, err error) {
 		fallthrough
 	case "postgresql":
 		return parsePostgres(dsn)
+	case "sqlite", "sqlite3":
+		// SQLite is an embedded database whose DSN is a file path (or
+		// ":memory:") rather than a network address, so there is no
+		// endpoint to extract and nothing to report as an error.
+		return "", nil
 	}
 
 	return "", errors.New("invalid DSN")
