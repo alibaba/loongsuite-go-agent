@@ -47,11 +47,15 @@ func captureFastHTTPRequestHeaders(header *fasthttp.RequestHeader) string {
 }
 
 func captureFastHTTPRequestBody(req *fasthttp.Request) string {
-	if req == nil {
+	if req == nil || !fastHttpCaptureConfig.CaptureBody || fastHttpCaptureConfig.MaxBodyBytes <= 0 {
+		return ""
+	}
+	body := req.Body()
+	if len(body) == 0 || int64(len(body)) > fastHttpCaptureConfig.MaxBodyBytes {
 		return ""
 	}
 	return fastHttpCaptureConfig.CaptureBodyContent(
-		req.Body(),
+		body,
 		string(req.Header.ContentType()),
 		string(req.Header.ContentEncoding()),
 		false,

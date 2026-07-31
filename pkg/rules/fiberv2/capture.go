@@ -47,11 +47,15 @@ func captureFiberV2RequestHeaders(header *fasthttp.RequestHeader) string {
 }
 
 func captureFiberV2RequestBody(req *fasthttp.Request) string {
-	if req == nil {
+	if req == nil || !fiberV2CaptureConfig.CaptureBody || fiberV2CaptureConfig.MaxBodyBytes <= 0 {
+		return ""
+	}
+	body := req.Body()
+	if len(body) == 0 || int64(len(body)) > fiberV2CaptureConfig.MaxBodyBytes {
 		return ""
 	}
 	return fiberV2CaptureConfig.CaptureBodyContent(
-		req.Body(),
+		body,
 		string(req.Header.ContentType()),
 		string(req.Header.ContentEncoding()),
 		false,
