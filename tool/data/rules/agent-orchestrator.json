@@ -1,0 +1,20 @@
+[
+  {
+    "Version": "[0.10.1,)",
+    "ImportPath": "github.com/aoagents/agent-orchestrator/backend/internal/session_manager",
+    "Function": "Spawn",
+    "ReceiverType": "\\*Manager",
+    "OnEnter": "agentOrchestratorSpawnOnEnter",
+    "OnExit": "agentOrchestratorSpawnOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/agent-orchestrator"
+  },
+  {
+    "Version": "[0.10.1,)",
+    "ImportPath": "github.com/aoagents/agent-orchestrator/backend/internal/session_manager",
+    "Function": "Send",
+    "ReceiverType": "\\*Manager",
+    "OnEnter": "agentOrchestratorSendOnEnter",
+    "OnExit": "agentOrchestratorSendOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/agent-orchestrator"
+  }
+]

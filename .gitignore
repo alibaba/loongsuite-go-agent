@@ -138,3 +138,6 @@ docs/.vitepress/cache
 test/build/go.work.sum
 test/dubbo/v3.3.0/test_dubbo_basictest.test
 test/dubbo/v3.3.0/test_dubbo_basic
+
+# agent-orchestrator test binary
+test/agent-orchestrator/v0.10.1/test_agent_orchestrator
