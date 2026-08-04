@@ -83,19 +83,21 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/user/config
 | clickhouse/v2      | https://github.com/ClickHouse/clickhouse-go/v2  | v2.13.0     | -           |
 | cron               | https://github.com/robfig/cron/v3               | v3.0.0      | -           |
 | database/sql       | https://pkg.go.dev/database/sql                 | -           | -           |
+| deepseek           | https://github.com/cohesion-org/deepseek-go     | v1.3.0      | -           |
 | dubbo-go           | https://github.com/apache/dubbo-go              | v3.3.0      | -           |
 | echo               | https://github.com/labstack/echo                | v4.0.0      | -           |
 | elasticsearch      | https://github.com/elastic/go-elasticsearch     | v8.4.0      | v8.15.1     |
 | eino               | https://github.com/cloudwego/eino               | v0.3.51     | -           |
 | fasthttp           | https://github.com/valyala/fasthttp             | v1.45.0     | v1.65.1     |
 | fiber              | https://github.com/gofiber/fiber                | v2.43.0     | v2.52.13    |
+| fiber/v3           | https://github.com/gofiber/fiber/v3             | v3.0.0      | -           |
 | franz-go           | https://github.com/twmb/franz-go                | v1.18.0     | -           |
 | gin                | https://github.com/gin-gonic/gin                | v1.7.0      | v1.10.2     |
 | go-kit/log         | https://github.com/go-kit/log                   | v0.1.0      | v0.2.2      |
 | go-micro           | https://github.com/micro/go-micro               | v5.0.0      | v5.3.1      |
 | go-openai          | https://github.com/sashabaranov/go-openai       | v1.30.0     | -           |
-| go-restful         | https://github.com/emicklei/go-restful          | v3.7.0      | v3.12.2     |
 | gocql              | https://github.com/gocql/gocql                  | v1.3.0      | v1.7.1      |
+| google-genai       | https://pkg.go.dev/google.golang.org/genai      | v1.30.0     | -           |
 | gopg               | https://github.com/go-pg/pg                     | v10.10.0    | v10.14.1    |
 | gorestful/v3       | https://github.com/emicklei/go-restful/v3       | v3.7.0      | v3.12.2     |
 | gorm               | https://github.com/go-gorm/gorm                 | v1.22.0     | v1.25.10    |
@@ -107,14 +109,18 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/user/config
 | k8s client-go      | https://github.com/kubernetes/client-go         | v0.33.3     | -           |
 | kitex              | https://github.com/cloudwego/kitex              | v0.5.1      | -           |
 | kratos             | https://github.com/go-kratos/kratos             | v2.6.3      | -           |
+| kratos/v3          | https://github.com/go-kratos/kratos/v3          | v3.0.0      | -           |
 | langchaingo        | https://github.com/tmc/langchaingo              | v0.1.13     | -           |
 | log                | https://pkg.go.dev/log                          | -           | -           |
 | logrus             | https://github.com/sirupsen/logrus              | v1.5.0      | -           |
 | mcp                | https://github.com/mark3labs/mcp-go             | v0.20.0     | v0.20.2     |
+| mcp go-sdk         | https://github.com/modelcontextprotocol/go-sdk  | v0.7.0      | -           |
+| meguminnnnnnnnn/go-openai | https://github.com/meguminnnnnnnnn/go-openai    | -           | -           |
 | mongodb            | https://github.com/mongodb/mongo-go-driver      | v1.11.1     | v1.15.2     |
 | mqtt               | https://github.com/mochi-mqtt/server            | v2.6.4      | -           |
 | nacos              | https://github.com/nacos-group/nacos-sdk-go/v2  | v2.0.0      | v2.3.0      |
 | net/http           | https://pkg.go.dev/net/http                     | -           | -           |
+| new-api            | https://github.com/QuantumNous/new-api          | -           | -           |
 | ollama             | https://github.com/ollama/ollama                | v0.3.14     | -           |
 | openai-go          | https://github.com/openai/openai-go             | v1.5.0      | -           |
 | redigo             | https://github.com/gomodule/redigo              | v1.9.0      | -           |
@@ -129,6 +135,7 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/user/config
 | slog               | https://pkg.go.dev/log/slog                     | -           | -           |
 | sqlx               | https://github.com/jmoiron/sqlx                 | v1.3.0      | v1.4.1      |
 | streadway-amqp     | https://github.com/streadway/amqp               | v1.0.0      | -           |
+| trpc-agent-go      | https://github.com/trpc-group/trpc-agent-go     | v0.1.0      | -           |
 | trpc-go            | https://github.com/trpc-group/trpc-go           | v1.0.0      | -           |
 | zap                | https://github.com/uber-go/zap                  | v1.20.0     | v1.27.1     |
 | zerolog            | https://github.com/rs/zerolog                   | v1.10.0     | v1.34.1     |

@@ -16,14 +16,38 @@ package databasesql
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/xwb1989/sqlparser"
 )
 
+// isParsableDML reports whether the statement is one of the DML statements
+// that the metadata extraction below actually understands. Feeding anything
+// else (e.g. DDL) into the MySQL-oriented sqlparser is useless and can make
+// the parser itself emit misleading "ignoring error parsing DDL" logs for
+// dialect-specific syntax such as SQLite's AUTOINCREMENT.
+func isParsableDML(sql string) bool {
+	fields := strings.Fields(sql)
+	if len(fields) == 0 {
+		return false
+	}
+	switch strings.ToUpper(fields[0]) {
+	case "SELECT", "INSERT", "UPDATE", "DELETE":
+		return true
+	}
+	return false
+}
+
 func extractSQLMetadata(request databaseSqlRequest) {
 	sql := request.sql
 
-	if sqlCache.Contains(sql) {
+	if meta, found := sqlCache.Get(sql); found {
+		// The collection may have been cached by getCollection() already,
+		// complete the missing operation without parsing the SQL again.
+		if meta.operation == "" && request.opType != "" {
+			meta.operation = request.opType
+			sqlCache.Add(sql, meta)
+		}
 		return
 	}
 
@@ -41,8 +65,11 @@ func getCollection(sql string) string {
 	if meta, found := sqlCache.Get(sql); found {
 		return meta.collection
 	}
-	// Attempt to retrieve the collection again.
-	return extractCollection(sql)
+	// Cache the result so that the same statement will not be parsed again
+	// by the subsequent metadata extraction.
+	collection := extractCollection(sql)
+	sqlCache.Add(sql, SQLMeta{stmt: sql, collection: collection})
+	return collection
 }
 
 func getParams(sql string) []any {
@@ -67,11 +94,14 @@ func getParams(sql string) []any {
 }
 
 func extractCollection(query string) string {
+	// Only support DML currently
+	if !isParsableDML(query) {
+		return ""
+	}
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		return ""
 	}
-	// Only support DML currently
 	switch stmt := stmt.(type) {
 	case *sqlparser.Select:
 		return getTableName(stmt.From)
@@ -107,6 +137,10 @@ func getTableName(node sqlparser.SQLNode) string {
 
 // Extract SQL parameters
 func extractSQLParams(query string) (map[string]string, error) {
+	// Only support DML currently
+	if !isParsableDML(query) {
+		return nil, nil
+	}
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		log.Printf("failed to fetch sql params: %v", err)
@@ -114,7 +148,6 @@ func extractSQLParams(query string) (map[string]string, error) {
 	}
 
 	values := make(map[string]string)
-	// Only support DML currently
 	switch stmt := stmt.(type) {
 	case *sqlparser.Select:
 		if stmt.Where != nil {

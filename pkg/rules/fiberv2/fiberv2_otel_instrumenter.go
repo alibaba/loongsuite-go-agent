@@ -143,7 +143,10 @@ func BuildFiberV2ServerOtelInstrumenter() *instrumenter.PropagatingFromUpstreamI
 			Name:    utils.FIBER_V2_SERVER_SCOPE_NAME,
 			Version: version.Tag,
 		}).
-		AddAttributesExtractor(&http.HttpServerAttrsExtractor[*fiberv2Request, *fiberv2Response, fiberv2ServerAttrsGetter, fiberv2ServerAttrsGetter, fiberv2ServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor}).BuildPropagatingFromUpstreamInstrumenter(func(n *fiberv2Request) propagation.TextMapCarrier {
+		AddAttributesExtractor(
+			&http.HttpServerAttrsExtractor[*fiberv2Request, *fiberv2Response, fiberv2ServerAttrsGetter, fiberv2ServerAttrsGetter, fiberv2ServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor},
+			&http.CaptureAttrsExtractor[*fiberv2Request, *fiberv2Response, fiberV2CaptureAttrsGetter]{Getter: fiberV2CaptureAttrsGetter{}},
+		).BuildPropagatingFromUpstreamInstrumenter(func(n *fiberv2Request) propagation.TextMapCarrier {
 		return fiberv2RequestCarrier{req: n.header}
 	}, otel.GetTextMapPropagator())
 }

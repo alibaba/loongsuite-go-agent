@@ -35,6 +35,7 @@ test/gorm/v1.23.1/test_gorm_crud
 test/golog/test_glog
 test/grpc/v1.77.0/test_grpc_basic
 test/fasthttp/v1.45.0/test_basic_http
+test/fasthttp/v1.45.0/test_capture
 test/hertz/v0.10.1/test_hertz_basic
 test/world/world
 coverage.txt
@@ -46,6 +47,8 @@ otel_pkg
 ssa.html
 otel_importer.go
 test/fiberv2/v2.43.0/fiber_http
+test/fiberv2/v2.43.0/fiber_capture
+test/fiberv3/v3.0.0/fiber_capture
 test/redis/v9.0.5/test_redis_ring
 
 
@@ -88,6 +91,7 @@ test/trpc/v1.0.0/test_trpc_metrics
 test/zap/test_zap_with_field
 
 test/nethttp/nethttp
+test/nethttp/test_http_capture
 test/redigo/v1.9.0/redigo
 test/redis/v8.11.0/test_redis_ring
 test/redis/v8.11.0/v8.11.0

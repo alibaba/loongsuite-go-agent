@@ -23,6 +23,10 @@ func init() {
 	TestCases = append(TestCases,
 		NewGeneralTestCase("basic-fasthttp-test", fasthttp_module_name, "", "", "1.18", "", TestBasicFastHttp),
 		NewGeneralTestCase("basic-fasthttps-test", fasthttp_module_name, "", "", "1.18", "", TestBasicFastHttps),
+		NewGeneralTestCase("fasthttp-capture-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCapture),
+		NewGeneralTestCase("fasthttp-capture-disabled-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureDisabled),
+		NewGeneralTestCase("fasthttp-capture-headers-only-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureHeadersOnly),
+		NewGeneralTestCase("fasthttp-capture-body-only-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureBodyOnly),
 		NewLatestDepthTestCase("fasthttp-latestdepth", fasthttp_dependency_name, fasthttp_module_name, "v1.45.0", "v1.65.0", "1.18", "", TestBasicFastHttp),
 		NewMuzzleTestCase("fasthttp-muzzle", fasthttp_dependency_name, fasthttp_module_name, "v1.45.0", "", "1.18", "", []string{"go", "build", "test_basic_http.go", "server.go"}))
 }
@@ -37,4 +41,48 @@ func TestBasicFastHttps(t *testing.T, env ...string) {
 	UseApp("fasthttp/v1.45.0")
 	RunGoBuild(t, "go", "build", "test_basic_https.go", "server.go")
 	RunApp(t, "test_basic_https", env...)
+}
+
+func TestFastHttpCapture(t *testing.T, env ...string) {
+	UseApp("fasthttp/v1.45.0")
+	RunGoBuild(t, "go", "build", "test_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "test_capture", envs...)
+}
+
+func TestFastHttpCaptureDisabled(t *testing.T, env ...string) {
+	UseApp("fasthttp/v1.45.0")
+	RunGoBuild(t, "go", "build", "test_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "test_capture", envs...)
+}
+
+func TestFastHttpCaptureHeadersOnly(t *testing.T, env ...string) {
+	UseApp("fasthttp/v1.45.0")
+	RunGoBuild(t, "go", "build", "test_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "test_capture", envs...)
+}
+
+func TestFastHttpCaptureBodyOnly(t *testing.T, env ...string) {
+	UseApp("fasthttp/v1.45.0")
+	RunGoBuild(t, "go", "build", "test_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "test_capture", envs...)
 }
