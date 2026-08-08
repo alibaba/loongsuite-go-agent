@@ -22,6 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mark3labs/mcp-go v0.20.0
+	github.com/neo4j/neo4j-go-driver/v6 v6.2.0
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/sirupsen/logrus v1.9.3
 	github.com/valyala/fasthttp v1.57.0

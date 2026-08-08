@@ -22,7 +22,7 @@ import (
 
 const WorldAppName = "world"
 
-const expectedImportCounts = 39
+const expectedImportCounts = 40
 
 func TestCompileTheWorld(t *testing.T) {
 	UseApp(WorldAppName)

@@ -42,6 +42,7 @@
 | meguminnnnnnnnn-openai | https://github.com/meguminnnnnnnnn/go-openai             | -           | -           |
 | mongodb             | https://github.com/mongodb/mongo-go-driver                  | v1.11.1     | v1.15.2     |
 | mqtt                | https://github.com/mochi-mqtt/server                        | v2.6.4      | -           |
+| neo4j               | https://github.com/neo4j/neo4j-go-driver                  | v6.0.0      | v6.2.0      |
 | nacos               | https://github.com/nacos-group/nacos-sdk-go/v2              | v2.0.0      | v2.3.0      |
 | net/http            | https://pkg.go.dev/net/http                                 | -           | -           |
 | new-api             | https://github.com/QuantumNous/new-api                      | -           | -           |

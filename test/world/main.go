@@ -23,9 +23,9 @@ import (
 	_ "runtime"
 
 	_ "dubbo.apache.org/dubbo-go/v3/filter/graceful_shutdown"
+	_ "github.com/alibaba/sentinel-golang/api"
 	_ "github.com/apache/rocketmq-client-go/v2/consumer"
 	_ "github.com/apache/rocketmq-client-go/v2/producer"
-	_ "github.com/alibaba/sentinel-golang/api"
 	_ "github.com/cloudwego/eino-ext/components/model/ark"
 	_ "github.com/cloudwego/eino-ext/components/model/claude"
 	_ "github.com/cloudwego/eino-ext/components/model/ollama"
@@ -41,6 +41,7 @@ import (
 	_ "github.com/gorilla/mux"
 	_ "github.com/labstack/echo/v4"
 	_ "github.com/mark3labs/mcp-go/mcp"
+	_ "github.com/neo4j/neo4j-go-driver/v6/neo4j"
 	_ "github.com/segmentio/kafka-go"
 	_ "github.com/sirupsen/logrus"
 	_ "github.com/valyala/fasthttp"

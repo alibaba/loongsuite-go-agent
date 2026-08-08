@@ -1,0 +1,29 @@
+[
+  {
+    "Version": "[6.0.0,)",
+    "ImportPath": "github.com/neo4j/neo4j-go-driver/v6/neo4j",
+    "ReceiverType": "\\*session",
+    "Function": "Run",
+    "OnEnter": "sessionRunOnEnter",
+    "OnExit": "sessionRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/neo4j"
+  },
+  {
+    "Version": "[6.0.0,)",
+    "ImportPath": "github.com/neo4j/neo4j-go-driver/v6/neo4j",
+    "ReceiverType": "\\*explicitTransaction",
+    "Function": "Run",
+    "OnEnter": "transactionRunOnEnter",
+    "OnExit": "transactionRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/neo4j"
+  },
+  {
+    "Version": "[6.0.0,)",
+    "ImportPath": "github.com/neo4j/neo4j-go-driver/v6/neo4j",
+    "ReceiverType": "\\*managedTransaction",
+    "Function": "Run",
+    "OnEnter": "transactionRunOnEnter",
+    "OnExit": "transactionRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/neo4j"
+  }
+]
