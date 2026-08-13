@@ -153,9 +153,16 @@ We are progressively open-sourcing the libraries we have supported, and your con
 # Community
 
 We are looking forward to your feedback and suggestions. You can join
-our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,PBuICMTDvdh0En8MrVbHBYTGUcPXJ/NdT6JKCZ8CG+w=&_dt_no_comment=1&origin=11)
-to engage with us.
+our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,mexukXI88tZ1uiuLYkKhdaETUx/K59ncyFFFG5Voe9s=&_dt_no_comment=1&origin=11?) or scan the QR code below to engage with us.
 
-| DingTalk | Star History |
-| :---: | :---: |
-| <img src="./docs/public/dingtalk.png" height="200" /> | <img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go&type=Date" height="200" /> |
+| LoongCollector SIG | LoongSuite Python SIG |
+|----|----|
+| <img src="docs/_assets/img/loongcollector-sig-dingtalk.png" height="150"> | <img src="docs/_assets/img/loongsuite-python-sig-dingtalk.jpg" height="150"> |
+
+| LoongCollector Go SIG | LoongSuite Java SIG |
+|----|----|
+| <img src="docs/_assets/img/loongsuite-go-sig-dingtalk.png" height="150"> | <img src="docs/_assets/img/loongsuite-java-sig-dingtalk.jpg" height="150"> |
+
+# Star History
+
+<img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go&type=Date" height="200" />
