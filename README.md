@@ -165,4 +165,4 @@ our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,mexukXI
 
 # Star History
 
-<img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go&type=Date" height="200" />
+<img src="https://star-history.dera.page/svg?repos=alibaba/loongsuite-go&type=Date" height="200" />
