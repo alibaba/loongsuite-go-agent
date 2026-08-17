@@ -13,7 +13,7 @@
 | echo               | https://github.com/labstack/echo                  | v4.0.0      | -           |
 | elasticsearch      | https://github.com/elastic/go-elasticsearch       | v8.4.0      | v8.15.1     |
 | eino               | https://github.com/cloudwego/eino                 | v0.3.51     | -           |
-| fasthttp           | https://github.com/valyala/fasthttp               | v1.45.0     | v1.65.1     |
+| fasthttp           | https://github.com/valyala/fasthttp               | v1.45.0     | -           |
 | fiber              | https://github.com/gofiber/fiber                  | v2.43.0     | v2.52.13    |
 | franz-go           | https://github.com/twmb/franz-go                  | v1.18.0     | -           |
 | gin                | https://github.com/gin-gonic/gin                  | v1.7.0      | v1.10.2     |

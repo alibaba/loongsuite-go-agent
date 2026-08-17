@@ -88,7 +88,7 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/user/config
 | echo               | https://github.com/labstack/echo                | v4.0.0      | -           |
 | elasticsearch      | https://github.com/elastic/go-elasticsearch     | v8.4.0      | v8.15.1     |
 | eino               | https://github.com/cloudwego/eino               | v0.3.51     | -           |
-| fasthttp           | https://github.com/valyala/fasthttp             | v1.45.0     | v1.65.1     |
+| fasthttp           | https://github.com/valyala/fasthttp             | v1.45.0     | -           |
 | fiber              | https://github.com/gofiber/fiber                | v2.43.0     | v2.52.13    |
 | fiber/v3           | https://github.com/gofiber/fiber/v3             | v3.0.0      | -           |
 | franz-go           | https://github.com/twmb/franz-go                | v1.18.0     | -           |
