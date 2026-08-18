@@ -1,16 +1,14 @@
 module github.com/alibaba/loongsuite-go/pkg/rules/nacos2_1_1/dom
 
-go 1.24.0
-
-toolchain go1.24.11
+go 1.25.0
 
 replace github.com/alibaba/loongsuite-go/pkg => ../../../../pkg
 
 require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/nacos-group/nacos-sdk-go/v2 v2.1.1
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/metric v1.45.0
 )
 
 require (
