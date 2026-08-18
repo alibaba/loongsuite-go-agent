@@ -330,6 +330,10 @@ func Preprocess() error {
 			return err
 		}
 	}
+
+	// Report before postProcess restores the user's go.mod, while the final
+	// resolved versions are still on disk.
+	dp.warnDependencyUpgrades()
 	util.Log("Build completed successfully")
 	return nil
 }
