@@ -85,7 +85,7 @@ type trpcStatusCodeExtractor[REQUEST trpcReq, RESPONSE trpcRes] struct {
 }
 
 func (t trpcStatusCodeExtractor[REQUEST, RESPONSE]) Extract(span trace.Span, request trpcReq, response trpcRes, err error) {
-	statusCode := response.stausCode
+	statusCode := response.statusCode
 	if statusCode != 0 {
 		if err != nil {
 			span.RecordError(err)

@@ -24,5 +24,5 @@ type trpcReq struct {
 }
 
 type trpcRes struct {
-	stausCode int
+	statusCode int
 }

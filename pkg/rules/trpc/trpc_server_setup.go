@@ -16,6 +16,7 @@ package trpc
 
 import (
 	"context"
+	"errors"
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
@@ -52,9 +53,12 @@ func serverTrpcOnExit(call api.CallContext, _ interface{}, err error) {
 	request := data["request"].(trpcReq)
 	statusCode := 0
 	if err != nil {
-		statusCode = int(err.(*errs.Error).Code)
+		var trpcErr *errs.Error
+		if errors.As(err, &trpcErr) {
+			statusCode = int(trpcErr.Code)
+		}
 	}
 	trpcServerInstrumenter.End(ctx, request, trpcRes{
-		stausCode: statusCode,
+		statusCode: statusCode,
 	}, err)
 }
