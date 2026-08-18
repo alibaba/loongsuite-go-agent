@@ -1,6 +1,6 @@
 [
   {
-    "Version": "[1.45.0,1.73.0)",
+    "Version": "[1.45.0,)",
     "ImportPath": "github.com/valyala/fasthttp",
     "Function": "Do",
     "ReceiverType": "\\*HostClient",
@@ -9,7 +9,7 @@
     "Path": "github.com/alibaba/loongsuite-go/pkg/rules/fasthttp"
   },
   {
-    "Version": "[1.45.0,1.73.0)",
+    "Version": "[1.45.0,)",
     "ImportPath": "github.com/valyala/fasthttp",
     "Function": "ListenAndServe",
     "ReceiverType": "\\*Server",

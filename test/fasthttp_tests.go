@@ -27,7 +27,9 @@ func init() {
 		NewGeneralTestCase("fasthttp-capture-disabled-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureDisabled),
 		NewGeneralTestCase("fasthttp-capture-headers-only-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureHeadersOnly),
 		NewGeneralTestCase("fasthttp-capture-body-only-test", fasthttp_module_name, "", "", "1.18", "", TestFastHttpCaptureBodyOnly),
-		NewLatestDepthTestCase("fasthttp-latestdepth", fasthttp_dependency_name, fasthttp_module_name, "v1.45.0", "v1.65.0", "1.18", "", TestBasicFastHttp),
+		// fasthttp v1.73.0 and above declare `go 1.25.0` in their go.mod, so the
+		// latest-depth check requires go 1.25.
+		NewLatestDepthTestCase("fasthttp-latestdepth", fasthttp_dependency_name, fasthttp_module_name, "v1.45.0", "", "1.25", "", TestBasicFastHttp),
 		NewMuzzleTestCase("fasthttp-muzzle", fasthttp_dependency_name, fasthttp_module_name, "v1.45.0", "", "1.18", "", []string{"go", "build", "test_basic_http.go", "server.go"}))
 }
 

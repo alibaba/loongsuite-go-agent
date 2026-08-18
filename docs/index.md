@@ -74,4 +74,4 @@ to engage with us.
 
 | DingTalk | Star History |
 | :---: | :---: |
-| <img src="./public/dingtalk.png" height="200" /> | <img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go&type=Date" height="200" /> |
+| <img src="./public/dingtalk.png" height="200" /> | <img src="https://star-history.dera.page/svg?repos=alibaba/loongsuite-go&type=Date" height="200" /> |
