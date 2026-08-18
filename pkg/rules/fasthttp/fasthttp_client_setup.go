@@ -60,8 +60,18 @@ func clientFastHttpOnExit(call api.CallContext, err error) {
 	if !fastHttpEnabler.Enable() {
 		return
 	}
-	data := call.GetData().(map[string]interface{})
-	ctx := data["ctx"].(context.Context)
+	dataRaw := call.GetData()
+	if dataRaw == nil {
+		return
+	}
+	data, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	ctx, ok := data["ctx"].(context.Context)
+	if !ok {
+		return
+	}
 	request := data["request"].(fastHttpRequest)
 	resp := data["response"].(*fasthttp.Response)
 	fastHttpClientInstrumenter.End(ctx, request, fastHttpResponse{
