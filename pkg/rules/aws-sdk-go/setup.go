@@ -15,6 +15,7 @@
 package aws_sdk_go
 
 import (
+	"context"
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
@@ -27,6 +28,20 @@ import (
 )
 
 const tracerName = "github.com/aws/aws-sdk-go"
+
+// Handler names, so the handlers are installed by name (replace-if-present)
+// and re-running the rule cannot stack duplicates onto the same list.
+const (
+	stripTraceHeadersHandlerName = "loongsuite-go/aws-sdk-go.StripTraceHeaders"
+	startSpanHandlerName         = "loongsuite-go/aws-sdk-go.StartSpan"
+	endSpanHandlerName           = "loongsuite-go/aws-sdk-go.EndSpan"
+)
+
+// spanContextKey carries the span started by this rule on the request
+// context. Looking it up with trace.SpanFromContext instead would return the
+// caller's parent span whenever this rule never started one (e.g. the request
+// failed during Validate/Build/Sign, so Send never ran) and end it early.
+type spanContextKey struct{}
 
 // newSessionOnExit hooks session.NewSession's return value so we can attach
 // tracing handlers to every client created from the session.
@@ -60,43 +75,69 @@ func installTraceHandlers(h *request.Handlers) {
 	// value no longer matches the sent value -> 403 SignatureDoesNotMatch /
 	// AccessDenied. Removing it before signing keeps it out of SignedHeaders,
 	// so it can never corrupt the signature regardless of later injection.
-	h.Sign.PushFront(func(r *request.Request) {
-		if r.HTTPRequest == nil {
-			return
-		}
-		r.HTTPRequest.Header.Del("traceparent")
-		r.HTTPRequest.Header.Del("tracestate")
+	h.Sign.SetFrontNamed(request.NamedHandler{
+		Name: stripTraceHeadersHandlerName,
+		Fn: func(r *request.Request) {
+			if r.HTTPRequest == nil {
+				return
+			}
+
+			r.HTTPRequest.Header.Del("traceparent")
+			r.HTTPRequest.Header.Del("tracestate")
+		},
 	})
 
 	// (2) Observability: emit a client span per SDK operation via the SDK's
 	// own handler chain, so trace context is carried in-process (not through
 	// signed HTTP headers) and never affects signing.
-	h.Send.PushFront(func(r *request.Request) {
-		spanName := r.Operation.Name
-		if r.ClientInfo.ServiceName != "" {
-			spanName = r.ClientInfo.ServiceName + "." + r.Operation.Name
-		}
-		ctx, span := otel.Tracer(tracerName).Start(
-			r.Context(), spanName, oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		)
-		span.SetAttributes(
-			attribute.String("rpc.system", "aws-api"),
-			attribute.String("rpc.service", r.ClientInfo.ServiceName),
-			attribute.String("rpc.method", r.Operation.Name),
-		)
-		r.SetContext(ctx)
+	//
+	// Send runs once per attempt while Complete runs once per request, so the
+	// span is created on the first attempt only and reused across retries;
+	// otherwise every retry would start a nested span that is never ended.
+	h.Send.SetFrontNamed(request.NamedHandler{
+		Name: startSpanHandlerName,
+		Fn: func(r *request.Request) {
+			if _, ok := r.Context().Value(spanContextKey{}).(oteltrace.Span); ok {
+				return
+			}
+
+			spanName := r.Operation.Name
+			if r.ClientInfo.ServiceName != "" {
+				spanName = r.ClientInfo.ServiceName + "." + r.Operation.Name
+			}
+
+			ctx, span := otel.Tracer(tracerName).Start(
+				r.Context(), spanName, oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+			)
+			span.SetAttributes(
+				attribute.String("rpc.system", "aws-api"),
+				attribute.String("rpc.service", r.ClientInfo.ServiceName),
+				attribute.String("rpc.method", r.Operation.Name),
+			)
+
+			r.SetContext(context.WithValue(ctx, spanContextKey{}, span))
+		},
 	})
-	h.Complete.PushBack(func(r *request.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		if !span.IsRecording() {
-			return
-		}
-		defer span.End()
-		if r.HTTPResponse != nil {
-			span.SetAttributes(attribute.Int("http.response.status_code", r.HTTPResponse.StatusCode))
-		}
-		if r.Error != nil {
-			span.SetStatus(codes.Error, r.Error.Error())
-		}
+
+	h.Complete.SetBackNamed(request.NamedHandler{
+		Name: endSpanHandlerName,
+		Fn: func(r *request.Request) {
+			// Only end the span this rule started; a request that failed
+			// before Send never stored one.
+			span, ok := r.Context().Value(spanContextKey{}).(oteltrace.Span)
+			if !ok || span == nil {
+				return
+			}
+
+			defer span.End()
+
+			if r.HTTPResponse != nil {
+				span.SetAttributes(attribute.Int("http.response.status_code", r.HTTPResponse.StatusCode))
+			}
+
+			if r.Error != nil {
+				span.SetStatus(codes.Error, r.Error.Error())
+			}
+		},
 	})
 }
