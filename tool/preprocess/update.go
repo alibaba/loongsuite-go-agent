@@ -43,7 +43,7 @@ var otelDeps = map[string]string{
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp": "v1.45.0",
 	"go.opentelemetry.io/otel/exporters/prometheus":                     "v0.67.0",
 	"go.opentelemetry.io/contrib/instrumentation/runtime":               "v0.70.0",
-	"google.golang.org/protobuf":                                        "v1.36.10",
+	"google.golang.org/protobuf":                                        "v1.36.11",
 	// Fix "ambiguous import" between legacy monolithic genproto and split genproto modules:
 	//
 	// Old versions of the monolithic module `google.golang.org/genproto` included packages
