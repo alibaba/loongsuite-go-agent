@@ -65,20 +65,31 @@ func newSessionWithOptionsOnExit(call api.CallContext, sess *session.Session, er
 }
 
 func installTraceHandlers(h *request.Handlers) {
-	// (1) Correctness fix: strip W3C trace context BEFORE SigV4 signing.
+	// (1) Correctness fix: strip W3C trace context before re-signing a retry.
 	//
 	// The generic net/http instrumentation injects `traceparent` at
-	// Transport.RoundTrip time. On a retry (e.g. server 503 SlowDown),
-	// aws-sdk-go reuses the same *http.Request whose header still carries the
-	// previously injected traceparent; the re-sign then folds it into
-	// SignedHeaders, while RoundTrip overwrites the value again -> the signed
-	// value no longer matches the sent value -> 403 SignatureDoesNotMatch /
-	// AccessDenied. Removing it before signing keeps it out of SignedHeaders,
-	// so it can never corrupt the signature regardless of later injection.
+	// Transport.RoundTrip time, i.e. after signing. The first attempt is
+	// therefore always safe: the header does not exist yet when SigV4 runs,
+	// so it never enters SignedHeaders. On a retry (e.g. server 503
+	// SlowDown), aws-sdk-go reuses the same *http.Request, whose header still
+	// carries the traceparent injected during the previous attempt; the
+	// re-sign folds it into SignedHeaders, while RoundTrip then overwrites
+	// the value with a new span -> the signed value no longer matches the
+	// sent value -> 403 SignatureDoesNotMatch / AccessDenied.
+	//
+	// Only retries are stripped, so trace context injected or set by the
+	// caller still propagates on the first attempt, and disabling the
+	// net/http instrumentation does not silently lose it.
+	//
+	// Residual window: a caller that sets `traceparent` on the request itself
+	// while the net/http instrumentation is enabled still gets the signed
+	// value overwritten on the very first attempt. Stripping unconditionally
+	// would close that too, at the cost of severing propagation for everyone
+	// else; the retry path is the one observed in practice.
 	h.Sign.SetFrontNamed(request.NamedHandler{
 		Name: stripTraceHeadersHandlerName,
 		Fn: func(r *request.Request) {
-			if r.HTTPRequest == nil {
+			if r.HTTPRequest == nil || r.RetryCount == 0 {
 				return
 			}
 
@@ -87,9 +98,17 @@ func installTraceHandlers(h *request.Handlers) {
 		},
 	})
 
-	// (2) Observability: emit a client span per SDK operation via the SDK's
-	// own handler chain, so trace context is carried in-process (not through
+	// (2) Observability: emit a span per SDK operation via the SDK's own
+	// handler chain, so trace context is carried in-process (not through
 	// signed HTTP headers) and never affects signing.
+	//
+	// The span is Internal, not Client: aws-sdk-go issues its requests
+	// through net/http, which the generic instrumentation already covers with
+	// its own client span. That span is not suppressed here (SpanKeySuppressor
+	// matches on scope names registered in InstrumentationRegistry, which this
+	// rule is not), so a Client span would double-count every outbound AWS
+	// call. Sibling SDK rules that sit on top of net/http (anthropic-sdk-go,
+	// deepseek) make the same choice.
 	//
 	// Send runs once per attempt while Complete runs once per request, so the
 	// span is created on the first attempt only and reused across retries;
@@ -101,19 +120,33 @@ func installTraceHandlers(h *request.Handlers) {
 				return
 			}
 
-			spanName := r.Operation.Name
-			if r.ClientInfo.ServiceName != "" {
-				spanName = r.ClientInfo.ServiceName + "." + r.Operation.Name
+			// Standard SDK clients always set Operation, but these handlers
+			// are attached to every request from the session, including
+			// hand-built ones.
+			operation := ""
+			if r.Operation != nil {
+				operation = r.Operation.Name
+			}
+
+			spanName := operation
+			if spanName == "" {
+				spanName = tracerName
+			} else if r.ClientInfo.ServiceName != "" {
+				spanName = r.ClientInfo.ServiceName + "." + operation
 			}
 
 			ctx, span := otel.Tracer(tracerName).Start(
-				r.Context(), spanName, oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+				r.Context(), spanName, oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
 			)
 			span.SetAttributes(
 				attribute.String("rpc.system", "aws-api"),
 				attribute.String("rpc.service", r.ClientInfo.ServiceName),
-				attribute.String("rpc.method", r.Operation.Name),
+				attribute.String("rpc.method", operation),
 			)
+
+			if r.HTTPRequest != nil && r.HTTPRequest.URL != nil {
+				span.SetAttributes(attribute.String("server.address", r.HTTPRequest.URL.Host))
+			}
 
 			r.SetContext(context.WithValue(ctx, spanContextKey{}, span))
 		},

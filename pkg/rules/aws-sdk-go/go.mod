@@ -2,6 +2,8 @@ module github.com/alibaba/loongsuite-go/pkg/rules/aws-sdk-go
 
 go 1.24.0
 
+toolchain go1.24.13
+
 require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go v1.55.5

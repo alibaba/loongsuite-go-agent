@@ -6,6 +6,7 @@
 | amqp091            | https://github.com/rabbitmq/amqp091-go            | v1.10.0     | -           |
 | anthropic-sdk-go   | https://github.com/anthropics/anthropic-sdk-go    | v1.25.0     | -           |
 | asynq              | https://github.com/hibiken/asynq                  | v0.23.0     | v0.26.0     |
+| aws-sdk-go         | https://github.com/aws/aws-sdk-go                 | v1.55.5     | -           |
 | clickhouse/v2      | https://github.com/ClickHouse/clickhouse-go/v2    | v2.13.0     | -           |
 | database/sql       | https://pkg.go.dev/database/sql                   | -           | -           |
 | deepseek           | https://github.com/cohesion-org/deepseek-go       | v1.3.0      | -           |
