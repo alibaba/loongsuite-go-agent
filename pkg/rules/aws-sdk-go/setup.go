@@ -29,6 +29,9 @@ import (
 
 const tracerName = "github.com/aws/aws-sdk-go"
 
+// Span name for a request that carries no Operation to name it after.
+const defaultSpanName = "aws-sdk-go"
+
 // Handler names, so the handlers are installed by name (replace-if-present)
 // and re-running the rule cannot stack duplicates onto the same list.
 const (
@@ -130,7 +133,7 @@ func installTraceHandlers(h *request.Handlers) {
 
 			spanName := operation
 			if spanName == "" {
-				spanName = tracerName
+				spanName = defaultSpanName
 			} else if r.ClientInfo.ServiceName != "" {
 				spanName = r.ClientInfo.ServiceName + "." + operation
 			}
