@@ -16,9 +16,14 @@ package aws_sdk_go
 
 import (
 	"context"
+	"errors"
+	"net"
+	"net/url"
+	"reflect"
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"go.opentelemetry.io/otel"
@@ -33,7 +38,10 @@ const tracerName = "github.com/aws/aws-sdk-go"
 const defaultSpanName = "aws-sdk-go"
 
 // Handler names, so the handlers are installed by name (replace-if-present)
-// and re-running the rule cannot stack duplicates onto the same list.
+// rather than appended. NewSession delegates to NewSessionWithOptions, so both
+// hooks fire for a single NewSession call and every session is installed onto
+// twice; naming the handlers keeps that idempotent instead of stacking
+// duplicates onto the same list.
 const (
 	stripTraceHeadersHandlerName = "loongsuite-go/aws-sdk-go.StripTraceHeaders"
 	startSpanHandlerName         = "loongsuite-go/aws-sdk-go.StartSpan"
@@ -84,11 +92,23 @@ func installTraceHandlers(h *request.Handlers) {
 	// caller still propagates on the first attempt, and disabling the
 	// net/http instrumentation does not silently lose it.
 	//
-	// Residual window: a caller that sets `traceparent` on the request itself
-	// while the net/http instrumentation is enabled still gets the signed
-	// value overwritten on the very first attempt. Stripping unconditionally
-	// would close that too, at the cost of severing propagation for everyone
-	// else; the retry path is the one observed in practice.
+	// What makes a header dangerous here is that its value changes between
+	// being signed and being sent. traceparent does: the net/http rule starts
+	// a fresh client span per attempt, so the span id differs every time.
+	// `baggage`, also injected by the default propagator, does not: it is
+	// derived from the context rather than from the per-attempt span, so the
+	// signed and sent values still match and it is left alone. Any future
+	// header that varies per attempt has to be added here.
+	//
+	// Two residual windows, both narrower than the one this closes:
+	//   - A caller that sets `traceparent` on the request itself while the
+	//     net/http instrumentation is enabled still gets the signed value
+	//     overwritten on the very first attempt.
+	//   - Conversely, with the net/http instrumentation disabled, a caller
+	//     that sets `traceparent` itself loses it from the retry onwards,
+	//     because nothing re-injects after the strip.
+	// Stripping unconditionally would close the first at the cost of widening
+	// the second for everyone; the retry path is the one observed in practice.
 	h.Sign.SetFrontNamed(request.NamedHandler{
 		Name: stripTraceHeadersHandlerName,
 		Fn: func(r *request.Request) {
@@ -131,11 +151,13 @@ func installTraceHandlers(h *request.Handlers) {
 				operation = r.Operation.Name
 			}
 
+			service := serviceName(r)
+
 			spanName := operation
 			if spanName == "" {
 				spanName = defaultSpanName
-			} else if r.ClientInfo.ServiceName != "" {
-				spanName = r.ClientInfo.ServiceName + "." + operation
+			} else if service != "" {
+				spanName = service + "." + operation
 			}
 
 			ctx, span := otel.Tracer(tracerName).Start(
@@ -143,12 +165,16 @@ func installTraceHandlers(h *request.Handlers) {
 			)
 			span.SetAttributes(
 				attribute.String("rpc.system", "aws-api"),
-				attribute.String("rpc.service", r.ClientInfo.ServiceName),
+				attribute.String("rpc.service", service),
 				attribute.String("rpc.method", operation),
 			)
 
 			if r.HTTPRequest != nil && r.HTTPRequest.URL != nil {
-				span.SetAttributes(attribute.String("server.address", r.HTTPRequest.URL.Host))
+				host, port := splitHostPort(r.HTTPRequest.URL)
+				span.SetAttributes(attribute.String("server.address", host))
+				if port != "" {
+					span.SetAttributes(attribute.String("server.port", port))
+				}
 			}
 
 			r.SetContext(context.WithValue(ctx, spanContextKey{}, span))
@@ -171,9 +197,54 @@ func installTraceHandlers(h *request.Handlers) {
 				span.SetAttributes(attribute.Int("http.response.status_code", r.HTTPResponse.StatusCode))
 			}
 
+			// Populated by the protocol's UnmarshalMeta handler, which runs
+			// before Complete. It is the identifier AWS support asks for, so
+			// it is worth carrying even on success.
+			if r.RequestID != "" {
+				span.SetAttributes(attribute.String("aws.request_id", r.RequestID))
+			}
+
 			if r.Error != nil {
+				span.SetAttributes(attribute.String("error.type", errorType(r.Error)))
+				span.RecordError(r.Error)
 				span.SetStatus(codes.Error, r.Error.Error())
 			}
 		},
 	})
+}
+
+// serviceName prefers ServiceID ("S3"), the identifier the OTel AWS semantic
+// conventions use for rpc.service, and falls back to ServiceName ("s3") for
+// clients built without one.
+func serviceName(r *request.Request) string {
+	if r.ClientInfo.ServiceID != "" {
+		return r.ClientInfo.ServiceID
+	}
+
+	return r.ClientInfo.ServiceName
+}
+
+// splitHostPort separates server.address from server.port, which the semantic
+// conventions keep apart. URL.Host carries the port only for non-default
+// endpoints (custom endpoints, MinIO, localstack), so the port is usually
+// absent and reported as such.
+func splitHostPort(u *url.URL) (string, string) {
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return u.Host, ""
+	}
+
+	return host, port
+}
+
+// errorType reports the class of a failed request. AWS error codes
+// ("SlowDown", "AccessDenied") are the meaningful classification here; other
+// failures fall back to the concrete Go type.
+func errorType(err error) string {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		return awsErr.Code()
+	}
+
+	return reflect.TypeOf(err).String()
 }
