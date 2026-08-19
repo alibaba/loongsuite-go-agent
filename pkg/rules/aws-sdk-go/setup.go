@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/url"
 	"reflect"
 	_ "unsafe"
 
@@ -170,8 +169,10 @@ func installTraceHandlers(h *request.Handlers) {
 			)
 
 			if r.HTTPRequest != nil && r.HTTPRequest.URL != nil {
-				host, port := splitHostPort(r.HTTPRequest.URL)
-				span.SetAttributes(attribute.String("server.address", host))
+				host, port := splitHostPort(r.HTTPRequest.URL.Host)
+				if host != "" {
+					span.SetAttributes(attribute.String("server.address", host))
+				}
 				if port != "" {
 					span.SetAttributes(attribute.String("server.port", port))
 				}
@@ -193,7 +194,11 @@ func installTraceHandlers(h *request.Handlers) {
 
 			defer span.End()
 
-			if r.HTTPResponse != nil {
+			// Send() substitutes an empty *http.Response before running
+			// Complete, so a request that never reached a server arrives here
+			// with a non-nil response whose StatusCode is 0. Reporting that as
+			// a status code is worse than omitting the attribute.
+			if r.HTTPResponse != nil && r.HTTPResponse.StatusCode != 0 {
 				span.SetAttributes(attribute.Int("http.response.status_code", r.HTTPResponse.StatusCode))
 			}
 
@@ -228,10 +233,10 @@ func serviceName(r *request.Request) string {
 // conventions keep apart. URL.Host carries the port only for non-default
 // endpoints (custom endpoints, MinIO, localstack), so the port is usually
 // absent and reported as such.
-func splitHostPort(u *url.URL) (string, string) {
-	host, port, err := net.SplitHostPort(u.Host)
+func splitHostPort(hostport string) (string, string) {
+	host, port, err := net.SplitHostPort(hostport)
 	if err != nil {
-		return u.Host, ""
+		return hostport, ""
 	}
 
 	return host, port

@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -78,18 +79,13 @@ func spansByName(stubs []tracetest.SpanStubs) map[string]tracetest.SpanStub {
 				continue
 			}
 
-			verifier.Assert(spansByNameIsUnique(spans, span.Name), "Expected exactly 1 %s span", span.Name)
+			_, seen := spans[span.Name]
+			verifier.Assert(!seen, "Expected exactly 1 %s span", span.Name)
 			spans[span.Name] = span
 		}
 	}
 
 	return spans
-}
-
-func spansByNameIsUnique(spans map[string]tracetest.SpanStub, name string) bool {
-	_, seen := spans[name]
-
-	return !seen
 }
 
 func main() {
@@ -146,12 +142,23 @@ func main() {
 	})
 	verifier.Assert(err != nil, "Expected GetObject to fail with AccessDenied")
 
+	// A third endpoint that is closed before use, so the request never gets
+	// an HTTP response at all and the span has no status code to report.
+	unreachable := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	unreachableURL := unreachable.URL
+	unreachable.Close()
+
+	_, err = s3.New(newSession(unreachableURL)).HeadBucketWithContext(context.Background(), &s3.HeadBucketInput{
+		Bucket: aws.String("test-bucket"),
+	})
+	verifier.Assert(err != nil, "Expected HeadBucket to fail against a closed endpoint")
+
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		spans := spansByName(stubs)
 
 		// One span per operation, reused across attempts: starting a span per
 		// attempt would leak every span but the last.
-		verifier.Assert(len(spans) == 2, "Expected exactly 2 aws-sdk-go spans, got %d", len(spans))
+		verifier.Assert(len(spans) == 3, "Expected exactly 3 aws-sdk-go spans, got %d", len(spans))
 
 		// rpc.service is ServiceID ("S3"), the identifier the OTel AWS
 		// semantic conventions use, not ServiceName ("s3").
@@ -194,5 +201,16 @@ func main() {
 
 		deniedID := verifier.GetAttribute(get.Attributes, "aws.request_id").AsString()
 		verifier.Assert(deniedID == deniedRequestID, "Expected aws.request_id to be %s, got %s", deniedRequestID, deniedID)
-	}, 2)
+
+		head, ok := spans["S3.HeadBucket"]
+		verifier.Assert(ok, "Expected a S3.HeadBucket span")
+
+		// No response ever arrived, so the attribute must be absent rather
+		// than reported as 0.
+		verifier.Assert(verifier.GetAttribute(head.Attributes, "http.response.status_code").Type() == attribute.INVALID,
+			"Expected http.response.status_code to be absent, got %v", verifier.GetAttribute(head.Attributes, "http.response.status_code"))
+
+		headErrorType := verifier.GetAttribute(head.Attributes, "error.type").AsString()
+		verifier.Assert(headErrorType == "RequestError", "Expected error.type to be RequestError, got %s", headErrorType)
+	}, 3)
 }
