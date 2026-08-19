@@ -22,12 +22,19 @@ const aws_sdk_go_module_name = "aws-sdk-go"
 func init() {
 	tc1 := NewGeneralTestCase("aws-sdk-go-s3-retry-test", aws_sdk_go_module_name, "v1.55.5", "", "1.24", "", TestAwsSdkGoS3Retry)
 	tc2 := NewMuzzleTestCase("aws-sdk-go-muzzle-test", aws_sdk_go_dependency_name, aws_sdk_go_module_name, "v1.55.5", "", "1.24", "", []string{"go", "build", "test_s3_retry.go"})
+	// The rule reaches session internals through go:linkname and the version
+	// range is left open, so the latest release has to be exercised, not just
+	// compiled against.
+	tc3 := NewLatestDepthTestCase("aws-sdk-go-latestdepth", aws_sdk_go_dependency_name, aws_sdk_go_module_name, "v1.55.5", "", "1.24", "", TestAwsSdkGoS3Retry)
 
 	if tc1 != nil {
 		TestCases = append(TestCases, tc1)
 	}
 	if tc2 != nil {
 		TestCases = append(TestCases, tc2)
+	}
+	if tc3 != nil {
+		TestCases = append(TestCases, tc3)
 	}
 }
 

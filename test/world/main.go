@@ -26,6 +26,7 @@ import (
 	_ "github.com/alibaba/sentinel-golang/api"
 	_ "github.com/apache/rocketmq-client-go/v2/consumer"
 	_ "github.com/apache/rocketmq-client-go/v2/producer"
+	_ "github.com/aws/aws-sdk-go/aws/session"
 	_ "github.com/cloudwego/eino-ext/components/model/ark"
 	_ "github.com/cloudwego/eino-ext/components/model/claude"
 	_ "github.com/cloudwego/eino-ext/components/model/ollama"
