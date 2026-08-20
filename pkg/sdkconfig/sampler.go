@@ -96,10 +96,13 @@ func newStandardSampler(name, arg string) trace.Sampler {
 		return trace.ParentBased(trace.NeverSample())
 	case "parentbased_traceidratio":
 		return trace.ParentBased(trace.TraceIDRatioBased(parseSamplerRatio(arg)))
+	case "jaeger_remote", "parentbased_jaeger_remote", "xray":
+		// Valid names, but they need samplers that are not linked into the
+		// agent.
+		log.Printf("OTEL_TRACES_SAMPLER=%s is not supported (remote and X-Ray samplers are not linked into the agent), fallback to parent based sampler", name)
+		return trace.ParentBased(trace.AlwaysSample())
 	default:
-		// jaeger_remote, parentbased_jaeger_remote and xray need samplers that
-		// are not linked into the agent.
-		log.Printf("Unsupported OTEL_TRACES_SAMPLER value: %s, fallback to parent based sampler", name)
+		log.Printf("Unknown OTEL_TRACES_SAMPLER value: %s, fallback to parent based sampler", name)
 		return trace.ParentBased(trace.AlwaysSample())
 	}
 }

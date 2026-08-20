@@ -56,6 +56,8 @@ func TestNewSpanSampler(t *testing.T) {
 
 		// Samplers that are not linked into the agent fall back.
 		{"jaeger_remote", "", "jaeger_remote", "", parentBasedAlwaysOn},
+		{"parentbased_jaeger_remote", "", "parentbased_jaeger_remote", "", parentBasedAlwaysOn},
+		{"xray", "", "xray", "", parentBasedAlwaysOn},
 		{"unknown", "", "not_a_sampler", "", parentBasedAlwaysOn},
 
 		// An unusable ratio falls back to 1.0, which is AlwaysOn.
@@ -65,6 +67,14 @@ func TestNewSpanSampler(t *testing.T) {
 		{"arg below range", "", "traceidratio", "-1", "AlwaysOnSampler"},
 		{"arg NaN", "", "traceidratio", "NaN", "AlwaysOnSampler"},
 		{"arg Inf", "", "traceidratio", "Inf", "AlwaysOnSampler"},
+
+		// The same fallbacks reach the parent-based variant.
+		{"parentbased missing arg", "", "parentbased_traceidratio", "", parentBasedAlwaysOn},
+		{"parentbased invalid arg", "", "parentbased_traceidratio", "abc", parentBasedAlwaysOn},
+		{"parentbased arg above range", "", "parentbased_traceidratio", "5", parentBasedAlwaysOn},
+		{"parentbased arg below range", "", "parentbased_traceidratio", "-1", parentBasedAlwaysOn},
+		{"parentbased arg NaN", "", "parentbased_traceidratio", "NaN", parentBasedAlwaysOn},
+		{"parentbased arg Inf", "", "parentbased_traceidratio", "Inf", parentBasedAlwaysOn},
 	}
 
 	for _, tt := range tests {
