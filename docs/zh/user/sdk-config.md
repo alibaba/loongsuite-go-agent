@@ -21,8 +21,12 @@
   - `traceidratio`、`parentbased_traceidratio`：采样比率从 `OTEL_TRACES_SAMPLER_ARG` 读取
   - `parentbased_always_on`（规范默认值）、`parentbased_always_off`
   - `jaeger_remote`、`parentbased_jaeger_remote` 和 `xray` 暂不支持，会回退到默认采样器。
-- `OTEL_TRACES_SAMPLER_ARG`: 所选采样器的参数。对于 `*_traceidratio` 采样器，它是 0.0 到 1.0 之间的浮点数；未设置、无法解析或超出范围时回退为 `1.0`。
+- `OTEL_TRACES_SAMPLER_ARG`: 所选采样器的参数。它仅被 `traceidratio` 和 `parentbased_traceidratio` 采样器读取，其余采样器会忽略它。取值为 0.0 到 1.0 之间的浮点数；未设置、无法解析或超出范围时会记录日志并回退为 `1.0`。
 - `OTEL_TRACE_SAMPLER`: 早于标准变量引入的 Agent 私有配置，设置后**优先级高于标准变量**。0.0 到 1.0 之间的浮点数会设置一个基于比率的采样器。小于等于 0 的值将永不采样，大于等于 1 的值将始终采样。
 
   当 `OTEL_TRACE_SAMPLER` 和 `OTEL_TRACES_SAMPLER` 都未设置时，默认是基于父级的采样器，并且始终采样。
+
+  注意两个变量并不等价：`OTEL_TRACE_SAMPLER=0.5` 构建的是**基于父级的**比率采样器，而 `OTEL_TRACES_SAMPLER=traceidratio` 配合 `OTEL_TRACES_SAMPLER_ARG=0.5` 构建的是**非**基于父级的采样器。若要保持原有行为，请使用 `parentbased_traceidratio`。
+
+  **升级提示**：支持标准采样器变量之前的版本会完全忽略 `OTEL_TRACES_SAMPLER`。如果你的平台已经注入了该变量，升级后采样行为会发生变化。显式设置 `OTEL_TRACE_SAMPLER` 可保持当前的采样器不变。
 - `OTEL_INSTRUMENTATION_HTTP_EXCLUDE_PATHS`: 指定要从 HTTP 自动埋点中排除的 URL 路径正则表达式（例如 `^/(ping|health|metrics)$`）。路径匹配该正则表达式的请求将不会生成 span。默认不排除任何路径。

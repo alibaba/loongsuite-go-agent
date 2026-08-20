@@ -22,7 +22,6 @@ import (
 	http2 "net/http"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/alibaba/loongsuite-go/pkg/core/meter"
@@ -31,6 +30,7 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/experimental"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/http"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/rpc"
+	"github.com/alibaba/loongsuite-go/pkg/sdkconfig"
 	testaccess "github.com/alibaba/loongsuite-go/pkg/testaccess"
 	prometheus_client "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -68,17 +68,6 @@ const trace_exporter = "OTEL_TRACES_EXPORTER"
 const prometheus_exporter_port = "OTEL_EXPORTER_PROMETHEUS_PORT"
 const default_prometheus_exporter_port = "9464"
 const metrics_temporality_preference = "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"
-
-const trace_sampler = "OTEL_TRACE_SAMPLER"
-
-// Standard OpenTelemetry SDK sampler configuration.
-// https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
-const traces_sampler = "OTEL_TRACES_SAMPLER"
-const traces_sampler_arg = "OTEL_TRACES_SAMPLER_ARG"
-
-// Ratio used when a *_traceidratio sampler is selected without a usable
-// OTEL_TRACES_SAMPLER_ARG, as required by the specification.
-const default_sampler_ratio = 1.0
 
 var (
 	metricExporters    []metric.Exporter
@@ -189,85 +178,6 @@ func createTraceExporter(ctx context.Context, name string) (trace.SpanExporter, 
 	}
 }
 
-func newSpanSampler() trace.Sampler {
-	// OTEL_TRACE_SAMPLER is specific to this agent and predates the standard
-	// variables, so it keeps precedence for deployments already using it.
-	if samplerStr := strings.TrimSpace(os.Getenv(trace_sampler)); samplerStr != "" {
-		return newRatioSampler(samplerStr)
-	}
-
-	if samplerStr := strings.TrimSpace(os.Getenv(traces_sampler)); samplerStr != "" {
-		return newStandardSampler(samplerStr, os.Getenv(traces_sampler_arg))
-	}
-
-	// Equivalent to the specification default, parentbased_always_on.
-	return trace.ParentBased(trace.AlwaysSample())
-}
-
-// newRatioSampler handles OTEL_TRACE_SAMPLER, which takes a bare ratio.
-func newRatioSampler(samplerStr string) trace.Sampler {
-	sampler, err := strconv.ParseFloat(samplerStr, 64)
-	if err != nil {
-		log.Printf("Invalid OTEL_TRACE_SAMPLER value: %s, fallback to parent based sampler", samplerStr)
-		return trace.ParentBased(trace.AlwaysSample())
-	}
-
-	if sampler <= 0 {
-		return trace.NeverSample()
-	} else if sampler >= 1 {
-		return trace.AlwaysSample()
-	} else {
-		return trace.ParentBased(trace.TraceIDRatioBased(sampler))
-	}
-}
-
-// newStandardSampler handles OTEL_TRACES_SAMPLER / OTEL_TRACES_SAMPLER_ARG as
-// defined by the OpenTelemetry SDK environment variable specification.
-func newStandardSampler(name, arg string) trace.Sampler {
-	switch strings.ToLower(strings.TrimSpace(name)) {
-	case "always_on":
-		return trace.AlwaysSample()
-	case "always_off":
-		return trace.NeverSample()
-	case "traceidratio":
-		return trace.TraceIDRatioBased(parseSamplerRatio(arg))
-	case "parentbased_always_on":
-		return trace.ParentBased(trace.AlwaysSample())
-	case "parentbased_always_off":
-		return trace.ParentBased(trace.NeverSample())
-	case "parentbased_traceidratio":
-		return trace.ParentBased(trace.TraceIDRatioBased(parseSamplerRatio(arg)))
-	default:
-		// jaeger_remote, parentbased_jaeger_remote and xray need samplers that
-		// are not linked into the agent.
-		log.Printf("Unsupported OTEL_TRACES_SAMPLER value: %s, fallback to parent based sampler", name)
-		return trace.ParentBased(trace.AlwaysSample())
-	}
-}
-
-// parseSamplerRatio reads OTEL_TRACES_SAMPLER_ARG for the *_traceidratio
-// samplers. The specification says to log and fall back to the default ratio
-// when the value is missing or cannot be used.
-func parseSamplerRatio(arg string) float64 {
-	arg = strings.TrimSpace(arg)
-	if arg == "" {
-		return default_sampler_ratio
-	}
-
-	ratio, err := strconv.ParseFloat(arg, 64)
-	if err != nil {
-		log.Printf("Invalid OTEL_TRACES_SAMPLER_ARG value: %s, fallback to ratio %v", arg, default_sampler_ratio)
-		return default_sampler_ratio
-	}
-
-	if ratio < 0 || ratio > 1 {
-		log.Printf("Out of range OTEL_TRACES_SAMPLER_ARG value: %s, fallback to ratio %v", arg, default_sampler_ratio)
-		return default_sampler_ratio
-	}
-
-	return ratio
-}
-
 func getTemporalitySelector() metric.TemporalitySelector {
 	pref := strings.ToLower(strings.TrimSpace(os.Getenv(metrics_temporality_preference)))
 	
@@ -325,7 +235,7 @@ func lowMemoryTemporalitySelector(ik metric.InstrumentKind) metricdata.Temporali
 
 func initOpenTelemetry(ctx context.Context) error {
 	processors := newSpanProcessors(ctx)
-	spanSampler = newSpanSampler()
+	spanSampler = sdkconfig.NewSpanSampler()
 
 	var options []trace.TracerProviderOption
 	if len(processors) > 0 {
