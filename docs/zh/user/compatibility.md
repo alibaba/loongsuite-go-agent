@@ -10,24 +10,31 @@
 - 将发布`loongsuite-go`的次要版本，以增加对新支持的Go版本的支持。
 - `loongsuite-go`的下一个次要版本将移除对最旧（现已在上游归档）的Go版本的兼容性测试。此版本以及将来的`loongsuite-go`版本可能包含仅受当前支持的Go版本支持的功能。
 
+> [!IMPORTANT]
+> **最低 Go 版本：1.25。** 从 OpenTelemetry v1.42.0 起，OTel 各模块的 `go` 指令声明为
+> `go 1.25.0`，而 `loongsuite-go` 固定使用 OTel v1.45.0。由于本工具会把这些模块注入被
+> 插桩的应用，因此工具本身和被插桩的应用都需要 Go 1.25 或更高版本。Go 1.24 仍能构建，
+> 只是因为默认的 `GOTOOLCHAIN=auto` 会自动下载 1.25 工具链；若设置 `GOTOOLCHAIN=local`
+> 则会构建失败。
+
 该项目在以下系统上进行了测试。
 
 | 操作系统 | Go 版本 | 架构  |
 | -------- | ------- | ----- |
 | Ubuntu   | 1.24    | amd64 |
-| Ubuntu   | 1.23    | amd64 |
+| Ubuntu   | 1.25    | amd64 |
 | Ubuntu   | 1.24    | 386   |
-| Ubuntu   | 1.23    | 386   |
+| Ubuntu   | 1.25    | 386   |
 | Ubuntu   | 1.24    | arm64 |
-| Ubuntu   | 1.23    | arm64 |
+| Ubuntu   | 1.25    | arm64 |
 | macOS 13 | 1.24    | amd64 |
-| macOS 13 | 1.23    | amd64 |
+| macOS 13 | 1.25    | amd64 |
 | macOS    | 1.24    | arm64 |
-| macOS    | 1.23    | arm64 |
+| macOS    | 1.25    | arm64 |
 | Windows  | 1.24    | amd64 |
-| Windows  | 1.23    | amd64 |
+| Windows  | 1.25    | amd64 |
 | Windows  | 1.24    | 386   |
-| Windows  | 1.23    | 386   |
+| Windows  | 1.25    | 386   |
 
 虽然该项目应该适用于其他系统，但目前不对这些系统提供兼容性保证。
 
