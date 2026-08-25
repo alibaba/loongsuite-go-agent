@@ -16,17 +16,29 @@ package http
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	stdnet "net"
+	"testing"
+
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/net"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 type httpServerAttrsGetter struct {
 }
 
 type httpClientAttrsGetter struct {
+}
+
+type customErrorTypeHttpClientAttrsGetter struct {
+	httpClientAttrsGetter
+}
+
+type headerlessResponseHttpClientAttrsGetter struct {
+	httpClientAttrsGetter
 }
 
 type networkAttrsGetter struct {
@@ -97,6 +109,10 @@ func (h httpClientAttrsGetter) GetHttpResponseHeader(request testRequest, respon
 
 func (h httpClientAttrsGetter) GetErrorType(request testRequest, response testResponse, err error) string {
 	return ""
+}
+
+func (h customErrorTypeHttpClientAttrsGetter) GetErrorType(request testRequest, response testResponse, err error) string {
+	return "custom-error-type"
 }
 
 func (h httpClientAttrsGetter) GetNetworkType(request testRequest, response testResponse) string {
@@ -228,21 +244,25 @@ func TestHttpClientExtractorStart(t *testing.T) {
 }
 
 func TestHttpClientExtractorEnd(t *testing.T) {
+	getter := httpClientAttrsGetter{}
 	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, httpClientAttrsGetter, networkAttrsGetter]{
-		Base:             HttpCommonAttrsExtractor[testRequest, testResponse, httpClientAttrsGetter, networkAttrsGetter]{},
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, httpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
 		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
 	}
 	attrs := make([]attribute.KeyValue, 0)
 	parentContext := context.Background()
 	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, nil)
-	if attrs[0].Key != semconv.HTTPResponseStatusCodeKey || attrs[0].Value.AsInt64() != 200 {
-		t.Fatalf("status code should be 200")
-	}
-	if attrs[1].Key != semconv.NetworkProtocolNameKey || attrs[1].Value.AsString() != "network-protocol-name" {
+	if attrs[0].Key != semconv.NetworkProtocolNameKey || attrs[0].Value.AsString() != "network-protocol-name" {
 		t.Fatalf("wrong network protocol name")
 	}
-	if attrs[2].Key != semconv.NetworkProtocolVersionKey || attrs[2].Value.AsString() != "network-protocol-version" {
+	if attrs[1].Key != semconv.NetworkProtocolVersionKey || attrs[1].Value.AsString() != "network-protocol-version" {
 		t.Fatalf("wrong network protocol version")
+	}
+	if attrs[2].Key != semconv.HTTPResponseStatusCodeKey || attrs[2].Value.AsInt64() != 200 {
+		t.Fatalf("status code should be 200")
 	}
 	if attrs[3].Key != semconv.NetworkTransportKey || attrs[3].Value.AsString() != "network-transport" {
 		t.Fatalf("wrong network transport")
@@ -268,6 +288,88 @@ func TestHttpClientExtractorEnd(t *testing.T) {
 	if attrs[10].Key != semconv.NetworkPeerPortKey || attrs[10].Value.AsInt64() != 8080 {
 		t.Fatalf("wrong network peer port")
 	}
+}
+
+func TestHttpClientExtractorEndTransportError(t *testing.T) {
+	getter := httpClientAttrsGetter{}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, httpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, httpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	connectErr := &stdnet.OpError{Op: "dial", Err: errors.New("connection refused")}
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, connectErr)
+	var foundStatusCode bool
+	var statusCodeVal int64
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPResponseStatusCodeKey {
+			foundStatusCode = true
+			statusCodeVal = attr.Value.AsInt64()
+		}
+	}
+	if !foundStatusCode {
+		t.Fatalf("transport error should set http.response.status_code to sentinel 0")
+	}
+	if statusCodeVal != 0 {
+		t.Fatalf("expected status_code to be 0 for transport error, got %d", statusCodeVal)
+	}
+	var foundErrorType bool
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+			if attr.Value.AsString() != "*net.OpError" {
+				t.Fatalf("error.type should be %q, got %q", "*net.OpError", attr.Value.AsString())
+			}
+		}
+	}
+	if !foundErrorType {
+		t.Fatalf("transport error should set error.type")
+	}
+}
+
+func TestHttpClientExtractorEndUsesGetterErrorType(t *testing.T) {
+	getter := customErrorTypeHttpClientAttrsGetter{}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, customErrorTypeHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, customErrorTypeHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	connectErr := &stdnet.OpError{Op: "dial", Err: errors.New("connection refused")}
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, connectErr)
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey && attr.Value.AsString() == "custom-error-type" {
+			return
+		}
+	}
+	t.Fatalf("getter error.type should take precedence")
+}
+
+func TestHttpClientExtractorEndWithHeaderlessResponse(t *testing.T) {
+	getter := headerlessResponseHttpClientAttrsGetter{}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, headerlessResponseHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, headerlessResponseHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, nil)
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPResponseStatusCodeKey && attr.Value.AsInt64() == 200 {
+			return
+		}
+	}
+	t.Fatalf("successful response should keep http.response.status_code")
 }
 
 func TestHttpServerExtractorStart(t *testing.T) {
@@ -344,6 +446,91 @@ func TestHttpServerExtractorEnd(t *testing.T) {
 	}
 	if attrs[12].Key != semconv.HTTPRouteKey || attrs[12].Value.AsString() != "http-route" {
 		t.Fatalf("httproute should be http-route")
+	}
+}
+
+type httpServerAttrsGetter500 struct {
+	httpServerAttrsGetter
+}
+
+func (h httpServerAttrsGetter500) GetHttpResponseStatusCode(request testRequest, response testResponse, err error) int {
+	return 500
+}
+
+func (h httpServerAttrsGetter500) GetErrorType(request testRequest, response testResponse, err error) string {
+	return ""
+}
+
+type httpServerAttrsGetter500WithCustom struct {
+	httpServerAttrsGetter500
+}
+
+func (h httpServerAttrsGetter500WithCustom) GetErrorType(request testRequest, response testResponse, err error) string {
+	return "custom-error-type"
+}
+
+func TestHttpServerExtractorEnd500(t *testing.T) {
+	httpServerExtractor := HttpServerAttrsExtractor[testRequest, testResponse, httpServerAttrsGetter500, networkAttrsGetter, urlAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, httpServerAttrsGetter500, networkAttrsGetter]{
+			HttpGetter: httpServerAttrsGetter500{},
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+		UrlExtractor:     net.UrlAttrsExtractor[testRequest, testResponse, urlAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	ctx := context.Background()
+	ctx = trace.ContextWithSpan(ctx, &testReadOnlySpan{isRecording: true})
+	attrs, _ = httpServerExtractor.OnEnd(attrs, ctx, testRequest{}, testResponse{}, nil)
+	
+	var foundErrorType bool
+	var errorTypeVal string
+	var errorTypeCount int
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+			errorTypeVal = attr.Value.AsString()
+			errorTypeCount++
+		}
+	}
+	if !foundErrorType {
+		t.Fatalf("should record error.type for 500 response")
+	}
+	if errorTypeVal != "500" {
+		t.Fatalf("error.type should be '500', got %q", errorTypeVal)
+	}
+	if errorTypeCount > 1 {
+		t.Fatalf("should not record duplicate error.type keys")
+	}
+}
+
+func TestHttpServerExtractorEnd500WithCustomErrorType(t *testing.T) {
+	httpServerExtractor := HttpServerAttrsExtractor[testRequest, testResponse, httpServerAttrsGetter500WithCustom, networkAttrsGetter, urlAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, httpServerAttrsGetter500WithCustom, networkAttrsGetter]{
+			HttpGetter: httpServerAttrsGetter500WithCustom{},
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+		UrlExtractor:     net.UrlAttrsExtractor[testRequest, testResponse, urlAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	ctx := context.Background()
+	ctx = trace.ContextWithSpan(ctx, &testReadOnlySpan{isRecording: true})
+	attrs, _ = httpServerExtractor.OnEnd(attrs, ctx, testRequest{}, testResponse{}, nil)
+	
+	var errorTypeCount int
+	var errorTypeVal string
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			errorTypeCount++
+			errorTypeVal = attr.Value.AsString()
+		}
+	}
+	if errorTypeCount != 1 {
+		t.Fatalf("expected exactly 1 error.type attribute, got %d", errorTypeCount)
+	}
+	if errorTypeVal != "custom-error-type" {
+		t.Fatalf("expected error.type to be 'custom-error-type', got %q", errorTypeVal)
 	}
 }
 
@@ -441,5 +628,187 @@ func TestNonRecordingSpan(t *testing.T) {
 	}
 	if attrs[11].Key != semconv.NetworkPeerPortKey || attrs[11].Value.AsInt64() != 8080 {
 		t.Fatalf("wrong network peer port")
+	}
+}
+
+type resolverHttpClientAttrsGetter struct {
+	httpClientAttrsGetter
+	hasResponse bool
+}
+
+func (h resolverHttpClientAttrsGetter) HasHttpResponse(request testRequest, response testResponse, err error) bool {
+	return h.hasResponse
+}
+
+func TestHttpClientExtractorEndResolverTrueWithError(t *testing.T) {
+	getter := resolverHttpClientAttrsGetter{hasResponse: true}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, resolverHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, resolverHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	connectErr := &stdnet.OpError{Op: "dial", Err: errors.New("connection refused")}
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, connectErr)
+
+	var statusCodeVal int64
+	var foundStatusCode bool
+	var errorTypeVal string
+	var foundErrorType bool
+
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPResponseStatusCodeKey {
+			foundStatusCode = true
+			statusCodeVal = attr.Value.AsInt64()
+		}
+		if attr.Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+			errorTypeVal = attr.Value.AsString()
+		}
+	}
+
+	if !foundStatusCode {
+		t.Fatalf("expected http.response.status_code when hasResponse is true")
+	}
+	if statusCodeVal != 200 {
+		t.Fatalf("expected status_code to be 200, got %d", statusCodeVal)
+	}
+	if !foundErrorType {
+		t.Fatalf("expected error.type when err != nil")
+	}
+	if errorTypeVal != "*net.OpError" {
+		t.Fatalf("expected error.type to be '*net.OpError', got %q", errorTypeVal)
+	}
+}
+
+type resolverStatusCodeHttpClientAttrsGetter struct {
+	httpClientAttrsGetter
+	hasResponse bool
+	code        int
+}
+
+func (h resolverStatusCodeHttpClientAttrsGetter) HasHttpResponse(request testRequest, response testResponse, err error) bool {
+	return h.hasResponse
+}
+
+func (h resolverStatusCodeHttpClientAttrsGetter) GetHttpResponseStatusCode(request testRequest, response testResponse, err error) int {
+	return h.code
+}
+
+func TestHttpClientExtractorEndResolverTrueWithErrorAnd4xxStatusPrefersGoErrorType(t *testing.T) {
+	getter := resolverStatusCodeHttpClientAttrsGetter{hasResponse: true, code: 404}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, resolverStatusCodeHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, resolverStatusCodeHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	wrappedErr := fmt.Errorf("middleware failed: %w", &stdnet.OpError{Op: "dial", Err: errors.New("connection refused")})
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, wrappedErr)
+
+	var statusCodeVal int64
+	var foundStatusCode bool
+	var errorTypeVal string
+	var foundErrorType bool
+
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPResponseStatusCodeKey {
+			foundStatusCode = true
+			statusCodeVal = attr.Value.AsInt64()
+		}
+		if attr.Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+			errorTypeVal = attr.Value.AsString()
+		}
+	}
+
+	if !foundStatusCode {
+		t.Fatalf("expected http.response.status_code when hasResponse is true")
+	}
+	if statusCodeVal != 404 {
+		t.Fatalf("expected status_code to be 404, got %d", statusCodeVal)
+	}
+	if !foundErrorType {
+		t.Fatalf("expected error.type when err != nil")
+	}
+	if errorTypeVal != "*net.OpError" {
+		t.Fatalf("expected error.type to be '*net.OpError', got %q", errorTypeVal)
+	}
+}
+
+func TestHttpClientExtractorEndResolverFalse(t *testing.T) {
+	getter := resolverHttpClientAttrsGetter{hasResponse: false}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, resolverHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, resolverHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, nil)
+
+	var statusCodeVal int64
+	var foundStatusCode bool
+
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPResponseStatusCodeKey {
+			foundStatusCode = true
+			statusCodeVal = attr.Value.AsInt64()
+		}
+	}
+
+	if !foundStatusCode {
+		t.Fatalf("expected http.response.status_code sentinel even when hasResponse is false")
+	}
+	if statusCodeVal != 0 {
+		t.Fatalf("expected status_code to be sentinel 0, got %d", statusCodeVal)
+	}
+}
+
+type errorStatusCodeResolverHttpClientAttrsGetter struct {
+	httpClientAttrsGetter
+	code int
+}
+
+func (h errorStatusCodeResolverHttpClientAttrsGetter) GetHttpResponseStatusCode(request testRequest, response testResponse, err error) int {
+	return h.code
+}
+
+func TestHttpClientExtractorEnd400ErrorTypeFallback(t *testing.T) {
+	getter := errorStatusCodeResolverHttpClientAttrsGetter{code: 404}
+	httpClientExtractor := HttpClientAttrsExtractor[testRequest, testResponse, errorStatusCodeResolverHttpClientAttrsGetter, networkAttrsGetter]{
+		Base: HttpCommonAttrsExtractor[testRequest, testResponse, errorStatusCodeResolverHttpClientAttrsGetter, networkAttrsGetter]{
+			HttpGetter: getter,
+			NetGetter:  networkAttrsGetter{},
+		},
+		NetworkExtractor: net.NetworkAttrsExtractor[testRequest, testResponse, networkAttrsGetter]{},
+	}
+	attrs := make([]attribute.KeyValue, 0)
+	parentContext := context.Background()
+	attrs, _ = httpClientExtractor.OnEnd(attrs, parentContext, testRequest{}, testResponse{}, nil)
+
+	var errorTypeVal string
+	var foundErrorType bool
+
+	for _, attr := range attrs {
+		if attr.Key == semconv.ErrorTypeKey {
+			foundErrorType = true
+			errorTypeVal = attr.Value.AsString()
+		}
+	}
+
+	if !foundErrorType {
+		t.Fatalf("expected error.type fallback for 404 status code when err is nil")
+	}
+	if errorTypeVal != "404" {
+		t.Fatalf("expected error.type fallback to be '404', got %q", errorTypeVal)
 	}
 }

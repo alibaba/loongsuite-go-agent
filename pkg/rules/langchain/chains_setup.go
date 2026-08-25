@@ -54,7 +54,14 @@ func callChainOnExit(call api.CallContext, v map[string]any, err error) {
 	if !langChainEnabler.Enable() {
 		return
 	}
-	data := call.GetData().(map[string]interface{})
+	dataRaw := call.GetData()
+	if dataRaw == nil {
+		return
+	}
+	data, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
 	ctx, ok := data["ctx"].(context.Context)
 	if !ok {
 		return

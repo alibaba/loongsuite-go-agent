@@ -69,4 +69,4 @@ $ otel go build -gcflags="-m" cmd/app
 
 | 钉钉 | Star历史 |
 | :---: | :---: |
-| <img src="../public/dingtalk.png" height="200" /> | <img src="https://api.star-history.com/svg?repos=alibaba/loongsuite-go&type=Date" height="200" /> |
+| <img src="../public/dingtalk.png" height="200" /> | <img src="https://star-history.dera.page/svg?repos=alibaba/loongsuite-go&type=Date" height="200" /> |

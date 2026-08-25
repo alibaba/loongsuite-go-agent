@@ -56,6 +56,11 @@ func (n fastHttpClientAttrsGetter) GetHttpRequestHeader(request fastHttpRequest,
 func (n fastHttpClientAttrsGetter) GetHttpResponseStatusCode(request fastHttpRequest, response fastHttpResponse, err error) int {
 	return response.statusCode
 }
+
+func (n fastHttpClientAttrsGetter) HasHttpResponse(request fastHttpRequest, response fastHttpResponse, err error) bool {
+	return response.statusCode >= 100
+}
+
 func (n fastHttpClientAttrsGetter) GetHttpResponseHeader(request fastHttpRequest, response fastHttpResponse, name string) []string {
 	all := make([]string, 0)
 	for _, header := range response.header.PeekAll(name) {
@@ -210,7 +215,10 @@ func BuildFastHttpClientOtelInstrumenter() *instrumenter.PropagatingToDownstream
 			Name:    utils.FAST_HTTP_CLIENT_SCOPE_NAME,
 			Version: version.Tag,
 		}).
-		AddAttributesExtractor(&http.HttpClientAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpClientAttrsGetter, fastHttpClientAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor}).BuildPropagatingToDownstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
+		AddAttributesExtractor(
+			&http.HttpClientAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpClientAttrsGetter, fastHttpClientAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor},
+			&http.CaptureAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpCaptureAttrsGetter]{Getter: fastHttpCaptureAttrsGetter{}},
+		).BuildPropagatingToDownstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
 		return fastHttpRequestCarrier{req: n.header}
 	}, otel.GetTextMapPropagator())
 }
@@ -227,7 +235,10 @@ func BuildFastHttpServerOtelInstrumenter() *instrumenter.PropagatingFromUpstream
 			Name:    utils.FAST_HTTP_SERVER_SCOPE_NAME,
 			Version: version.Tag,
 		}).
-		AddAttributesExtractor(&http.HttpServerAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor}).BuildPropagatingFromUpstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
+		AddAttributesExtractor(
+			&http.HttpServerAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter, fastHttpServerAttrsGetter]{Base: commonExtractor, NetworkExtractor: networkExtractor, UrlExtractor: urlExtractor},
+			&http.CaptureAttrsExtractor[fastHttpRequest, fastHttpResponse, fastHttpCaptureAttrsGetter]{Getter: fastHttpCaptureAttrsGetter{}},
+		).BuildPropagatingFromUpstreamInstrumenter(func(n fastHttpRequest) propagation.TextMapCarrier {
 		return fastHttpRequestCarrier{req: n.header}
 	}, otel.GetTextMapPropagator())
 }

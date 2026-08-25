@@ -36,10 +36,12 @@ func fiberHttpOnEnterv3(call api.CallContext, app *fiber.App, ctx *fasthttp.Requ
 		return
 	}
 	request := &fiberv3Request{
-		method: string(ctx.Method()),
-		url:    u,
-		isTls:  ctx.IsTLS(),
-		header: &ctx.Request.Header,
+		method:         string(ctx.Method()),
+		url:            u,
+		isTls:          ctx.IsTLS(),
+		header:         &ctx.Request.Header,
+		requestHeaders: captureFiberV3RequestHeaders(&ctx.Request.Header),
+		requestBody:    captureFiberV3RequestBody(&ctx.Request),
 	}
 	ctxSpan := fiberv3ServerInstrumenter.Start(ctx, request)
 	data := make(map[string]interface{}, 2)
@@ -63,8 +65,9 @@ func fiberHttpOnExitv3(call api.CallContext) {
 		return
 	}
 	fiberv3ServerInstrumenter.End(ctxSpan, request, &fiberv3Response{
-		statusCode: ctx.Response.StatusCode(),
-		header:     &ctx.Response.Header,
+		statusCode:   ctx.Response.StatusCode(),
+		header:       &ctx.Response.Header,
+		responseBody: captureFiberV3ResponseBody(&ctx.Response),
 	}, nil)
 
 }

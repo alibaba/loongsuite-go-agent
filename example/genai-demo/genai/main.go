@@ -28,6 +28,7 @@ import (
 	utilgenai "github.com/alibaba/loongsuite-go/util-genai"
 	openai "github.com/sashabaranov/go-openai"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -48,6 +49,10 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String("genai-demo"),
 			semconv.ServiceVersionKey.String("0.1.0"),
+			// Default resource attributes, added in code so no
+			// OTEL_RESOURCE_ATTRIBUTES export is required to run the demo.
+			attribute.String("deployment.environment", "dev"),
+			attribute.String("team", "genai"),
 		),
 	)
 	if err != nil {

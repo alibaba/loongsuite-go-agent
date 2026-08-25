@@ -50,11 +50,17 @@ func (n goMicroHttpClientAttrsGetter) GetHttpRequestHeader(request goMicroReques
 	return all
 }
 func (n goMicroHttpClientAttrsGetter) GetHttpResponseStatusCode(request goMicroRequest, response goMicroResponse, err error) int {
+	// Minor #7: 恢复原有的 GetHttpResponseStatusCode 逻辑以满足接口契约
 	if response.err != nil {
 		return 500
 	}
 	return 200
 }
+
+func (n goMicroHttpClientAttrsGetter) HasHttpResponse(request goMicroRequest, response goMicroResponse, err error) bool {
+	return err == nil
+}
+
 func (n goMicroHttpClientAttrsGetter) GetHttpResponseHeader(request goMicroRequest, response goMicroResponse, name string) []string {
 	all := make([]string, 0)
 	md, ok := metadata.FromContext(response.ctx)

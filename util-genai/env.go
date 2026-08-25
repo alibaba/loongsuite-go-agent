@@ -16,6 +16,7 @@ package utilgenai
 
 import (
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -94,4 +95,47 @@ func ShouldCaptureContentInSpan() bool {
 func ShouldCaptureContentInEvent() bool {
 	mode := GetContentCapturingMode()
 	return mode == EventOnly || mode == SpanAndEvent
+}
+
+// UploadFormat represents the serialization format for uploaded message content.
+type UploadFormat string
+
+const (
+	// UploadFormatJSON serializes all messages as a single JSON array.
+	UploadFormatJSON UploadFormat = "json"
+	// UploadFormatJSONL serializes each message as a separate JSON line.
+	UploadFormatJSONL UploadFormat = "jsonl"
+)
+
+// GetUploadBasePath returns the configured base path for message content upload.
+// An empty return value means upload is disabled.
+func GetUploadBasePath() string {
+	return os.Getenv(EnvUploadBasePath)
+}
+
+// GetUploadFormat returns the configured upload format, defaulting to json.
+func GetUploadFormat() UploadFormat {
+	switch strings.ToLower(os.Getenv(EnvUploadFormat)) {
+	case "jsonl":
+		return UploadFormatJSONL
+	default:
+		return UploadFormatJSON
+	}
+}
+
+// DefaultUploadMaxQueueSize is used when the queue size is unset or invalid.
+const DefaultUploadMaxQueueSize = 20
+
+// GetUploadMaxQueueSize returns the configured max upload queue size,
+// defaulting to DefaultUploadMaxQueueSize when unset or invalid.
+func GetUploadMaxQueueSize() int {
+	v := os.Getenv(EnvUploadMaxQueueSize)
+	if v == "" {
+		return DefaultUploadMaxQueueSize
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return DefaultUploadMaxQueueSize
+	}
+	return n
 }

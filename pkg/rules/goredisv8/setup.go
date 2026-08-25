@@ -99,7 +99,8 @@ func (o *otRedisV8Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error
 	if !ok {
 		redisV8Ctx = ctx
 	}
-	redisv8Instrumenter.End(redisV8Ctx, request, nil, cmd.Err())
+	err := cmd.Err()
+	redisv8Instrumenter.End(redisV8Ctx, request, nil, redisSpanEndErr(err))
 	return nil
 }
 
@@ -122,8 +123,8 @@ func (o *otRedisV8Hook) AfterProcessPipeline(ctx context.Context, cmds []redis.C
 	hasError := false
 	errSb := strings.Builder{}
 	for _, cmd := range cmds {
-		if cmd.Err() != nil {
-			errSb.WriteString(cmd.Err().Error())
+		if err := cmd.Err(); isRedisSpanError(err) {
+			errSb.WriteString(err.Error())
 			hasError = true
 		}
 	}

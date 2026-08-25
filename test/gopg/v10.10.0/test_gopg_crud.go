@@ -15,12 +15,14 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/alibaba/loongsuite-go/test/verifier"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"log"
-	"os"
 )
 
 var db *pg.DB
@@ -70,8 +72,9 @@ func TestDropTable() {
 }
 
 func main() {
+	addr := "127.0.0.1:" + os.Getenv("POSTGRES_PORT")
 	db = pg.Connect(&pg.Options{
-		Addr:     "127.0.0.1:" + os.Getenv("POSTGRES_PORT"),
+		Addr:     addr,
 		User:     "postgres",
 		Password: "postgres",
 		Database: "postgres",
@@ -90,4 +93,31 @@ func main() {
 		verifier.VerifyDbAttributes(stubs[4][0], "DELETE", "postgresql", "127.0.0.1", "DELETE FROM \"users\" AS \"user\" WHERE \"user\".\"id\" = '1'", "DELETE", "", nil)
 		verifier.VerifyDbAttributes(stubs[5][0], "DROP TABLE", "postgresql", "127.0.0.1", "DROP TABLE \"users\"", "DROP TABLE", "", nil)
 	}, 1)
+	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if len(point.DataPoints) <= 0 {
+				panic("db.client.request.duration has no datapoints")
+			}
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "postgresql" &&
+					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "SELECT" &&
+					verifier.GetAttribute(attrs, "server.address").AsString() == addr {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing SELECT datapoint for postgresql")
+			}
+		},
+	})
 }

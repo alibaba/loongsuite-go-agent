@@ -22,6 +22,10 @@ func init() {
 		NewGeneralTestCase("nethttp-http-2-test", "nethttp", "", "", "1.18", "", TestHttp2),
 		NewGeneralTestCase("nethttp-https-test", "nethttp", "", "", "1.18", "", TestHttps),
 		NewGeneralTestCase("nethttp-metric-test", "nethttp", "", "", "1.18", "", TestHttpMetric),
+		NewGeneralTestCase("nethttp-capture-test", "nethttp", "", "", "1.18", "", TestHttpCapture),
+		NewGeneralTestCase("nethttp-capture-disabled-test", "nethttp", "", "", "1.18", "", TestHttpCaptureDisabled),
+		NewGeneralTestCase("nethttp-capture-headers-only-test", "nethttp", "", "", "1.18", "", TestHttpCaptureHeadersOnly),
+		NewGeneralTestCase("nethttp-capture-body-only-test", "nethttp", "", "", "1.18", "", TestHttpCaptureBodyOnly),
 	)
 }
 
@@ -47,4 +51,48 @@ func TestHttpMetric(t *testing.T, env ...string) {
 	UseApp("nethttp")
 	RunGoBuild(t, "go", "build", "test_http_metrics.go", "http_server.go")
 	RunApp(t, "test_http_metrics", env...)
+}
+
+func TestHttpCapture(t *testing.T, env ...string) {
+	UseApp("nethttp")
+	RunGoBuild(t, "go", "build", "test_http_capture.go", "http_server.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "test_http_capture", envs...)
+}
+
+func TestHttpCaptureDisabled(t *testing.T, env ...string) {
+	UseApp("nethttp")
+	RunGoBuild(t, "go", "build", "test_http_capture.go", "http_server.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "test_http_capture", envs...)
+}
+
+func TestHttpCaptureHeadersOnly(t *testing.T, env ...string) {
+	UseApp("nethttp")
+	RunGoBuild(t, "go", "build", "test_http_capture.go", "http_server.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "test_http_capture", envs...)
+}
+
+func TestHttpCaptureBodyOnly(t *testing.T, env ...string) {
+	UseApp("nethttp")
+	RunGoBuild(t, "go", "build", "test_http_capture.go", "http_server.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "test_http_capture", envs...)
 }

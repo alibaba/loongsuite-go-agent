@@ -65,3 +65,37 @@ mapping of the `otel` to the supported OTel versions is as follows:
 | v1.8.2       | v1.40.0      | v0.65.0              |
 | v1.9.0       | v1.40.0      | v0.65.0              |
 | v1.10.0      | v1.40.0      | v0.65.0              |
+
+# Telemetry Migration Notes
+
+The following changes affect exported span attributes and metrics. Update dashboards
+and alerts accordingly when upgrading.
+
+## rueidis: `db.system.name` renamed to `redis`
+
+Previously, rueidis instrumentation set `db.system.name="rueidis"`. It now emits
+`db.system.name="redis"` to match OpenTelemetry semantic conventions and the
+goredis / redigo instrumentations.
+
+- **Impact:** Time series and span queries that filter on `db.system.name="rueidis"`
+  will stop matching after upgrade.
+- **Migration:** Change filters/aggregations to `db.system.name="redis"`. Distinguish
+  the client library via instrumentation scope name when needed.
+
+## Elasticsearch: `http.server.request.duration` replaced by `db.client.request.duration`
+
+The Elasticsearch plugin previously registered `HttpServerMetrics("elasticsearch.client")`,
+which incorrectly emitted `http.server.request.duration` for client operations. That
+listener is replaced by `DbClientMetrics("nosql.elasticsearch")`.
+
+| Before (incorrect) | After |
+| ------------------ | ----- |
+| `http.server.request.duration` from the ES plugin | `db.client.request.duration` with `db.system.name=elasticsearch` |
+
+- **Unchanged:** Transport-level `http.client.request.duration` from net/http
+  instrumentation continues to be emitted for the same requests.
+- **Migration:** Prefer `db.client.request.duration{db.system.name="elasticsearch"}`
+  for ES API latency. Prefer `http.client.request.duration` for HTTP transport
+  latency. Remove dashboards that relied on ES-scoped `http.server.request.duration`.
+- **No dual-write:** The previous `http.server.*` series on client spans was a
+  semconv mismatch and is not preserved during a deprecation window.

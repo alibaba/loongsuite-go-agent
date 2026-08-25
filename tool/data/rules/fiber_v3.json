@@ -1,8 +1,26 @@
 [
   {
-    "Version": "[3.0.0,)",
+    "Version": "[3.0.0,3.3.0)",
     "ImportPath": "github.com/gofiber/fiber/v3",
     "Function": "requestHandler",
+    "ReceiverType": "\\*App",
+    "OnEnter": "fiberHttpOnEnterv3",
+    "OnExit": "fiberHttpOnExitv3",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/fiberv3"
+  },
+  {
+    "Version": "[3.3.0,)",
+    "ImportPath": "github.com/gofiber/fiber/v3",
+    "Function": "defaultRequestHandler",
+    "ReceiverType": "\\*App",
+    "OnEnter": "fiberHttpOnEnterv3",
+    "OnExit": "fiberHttpOnExitv3",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/fiberv3"
+  },
+  {
+    "Version": "[3.3.0,)",
+    "ImportPath": "github.com/gofiber/fiber/v3",
+    "Function": "customRequestHandler",
     "ReceiverType": "\\*App",
     "OnEnter": "fiberHttpOnEnterv3",
     "OnExit": "fiberHttpOnExitv3",

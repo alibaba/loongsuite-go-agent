@@ -22,7 +22,6 @@ import (
 	http2 "net/http"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/http"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/rpc"
 	"github.com/alibaba/loongsuite-go/pkg/internal/metricexportinterval"
+	"github.com/alibaba/loongsuite-go/pkg/sdkconfig"
 	testaccess "github.com/alibaba/loongsuite-go/pkg/testaccess"
 	prometheus_client "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -70,8 +70,6 @@ const trace_exporter = "OTEL_TRACES_EXPORTER"
 const prometheus_exporter_port = "OTEL_EXPORTER_PROMETHEUS_PORT"
 const default_prometheus_exporter_port = "9464"
 const metrics_temporality_preference = "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"
-
-const trace_sampler = "OTEL_TRACE_SAMPLER"
 
 var (
 	metricExporters []metric.Exporter
@@ -182,28 +180,6 @@ func createTraceExporter(ctx context.Context, name string) (trace.SpanExporter, 
 	}
 }
 
-func newSpanSampler() trace.Sampler {
-	samplerStr := os.Getenv(trace_sampler)
-	samplerStr = strings.TrimSpace(samplerStr)
-	if samplerStr == "" {
-		return trace.ParentBased(trace.AlwaysSample())
-	}
-
-	sampler, err := strconv.ParseFloat(samplerStr, 64)
-	if err != nil {
-		log.Printf("Invalid OTEL_TRACE_SAMPLER value: %s, fallback to parent based sampler", samplerStr)
-		return trace.ParentBased(trace.AlwaysSample())
-	}
-
-	if sampler <= 0 {
-		return trace.NeverSample()
-	} else if sampler >= 1 {
-		return trace.AlwaysSample()
-	} else {
-		return trace.ParentBased(trace.TraceIDRatioBased(sampler))
-	}
-}
-
 func getTemporalitySelector() metric.TemporalitySelector {
 	pref := strings.ToLower(strings.TrimSpace(os.Getenv(metrics_temporality_preference)))
 
@@ -292,7 +268,7 @@ func lowMemoryTemporalitySelector(ik metric.InstrumentKind) metricdata.Temporali
 
 func initOpenTelemetry(ctx context.Context) error {
 	processors := newSpanProcessors(ctx)
-	spanSampler = newSpanSampler()
+	spanSampler = sdkconfig.NewSpanSampler()
 
 	var options []trace.TracerProviderOption
 	if len(processors) > 0 {

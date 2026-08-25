@@ -108,6 +108,13 @@ func (d *DbClientAttrsExtractor[REQUEST, RESPONSE, GETTER]) OnEnd(attrs []attrib
 	if dbNameSpace != "" {
 		attrs = append(attrs, attribute.KeyValue{Key: semconv.DBNamespaceKey, Value: attribute.StringValue(dbNameSpace)})
 	}
+	// Semconv Conditionally Required: error.type when the operation failed.
+	if errorType := NormalizeDBClientErrorType(err); errorType != "" {
+		attrs = append(attrs, attribute.KeyValue{
+			Key:   semconv.ErrorTypeKey,
+			Value: attribute.StringValue(errorType),
+		})
+	}
 	if d.Base.AttributesFilter != nil {
 		attrs = d.Base.AttributesFilter(attrs)
 	}

@@ -15,10 +15,10 @@
 package main
 
 import (
-	"strconv"
-
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/alibaba/loongsuite-go/test/verifier"
 	"github.com/elastic/go-elasticsearch/v8"
@@ -52,15 +52,55 @@ func main() {
 	}
 
 	verifier.WaitAndAssertMetrics(map[string]func(metricdata.ResourceMetrics){
+		"db.client.request.duration": func(mrs metricdata.ResourceMetrics) {
+			if len(mrs.ScopeMetrics) <= 0 {
+				panic("No db.client.request.duration metrics received!")
+			}
+			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			if len(point.DataPoints) == 0 {
+				panic("db.client.request.duration has no datapoints")
+			}
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "db.system.name").AsString() == "elasticsearch" &&
+					verifier.GetAttribute(attrs, "db.operation.name").AsString() == "put" &&
+					strings.Contains(verifier.GetAttribute(attrs, "server.address").AsString(), "127.0.0.1") {
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("db.client.request.duration missing elasticsearch put datapoint")
+			}
+		},
+		// net/http client instrumentation still records transport-level latency.
 		"http.client.request.duration": func(mrs metricdata.ResourceMetrics) {
 			if len(mrs.ScopeMetrics) <= 0 {
 				panic("No http.client.request.duration metrics received!")
 			}
 			point := mrs.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
-			if point.DataPoints[0].Count <= 0 {
-				panic("http.client.request.duration metrics count is not positive, actually " + strconv.Itoa(int(point.DataPoints[0].Count)))
+			if len(point.DataPoints) == 0 {
+				panic("http.client.request.duration has no datapoints")
 			}
-			verifier.VerifyHttpClientMetricsAttributes(point.DataPoints[0].Attributes.ToSlice(), "PUT", "", "", "http", "1.1", port, 200)
+			found := false
+			for _, dp := range point.DataPoints {
+				if dp.Count <= 0 {
+					continue
+				}
+				attrs := dp.Attributes.ToSlice()
+				if verifier.GetAttribute(attrs, "http.request.method").AsString() == "PUT" {
+					verifier.VerifyHttpClientMetricsAttributes(attrs, "PUT", "", "", "http", "1.1", port, 200)
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("http.client.request.duration missing PUT datapoint")
+			}
 		},
 	})
 }

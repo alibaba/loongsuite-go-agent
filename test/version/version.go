@@ -427,6 +427,11 @@ func GetRandomVersion(versionNum int, moduleName string, minVersion, maxVersion 
 		if err != nil {
 			continue
 		}
+		// skip pre-release versions (rc, alpha, beta, dep, etc.) to avoid
+		// selecting broken releases that may have invalid transitive dependencies
+		if v.PreRelease() != "" {
+			continue
+		}
 		if minVersion != nil && v.LessThan(minVersion) {
 			continue
 		}

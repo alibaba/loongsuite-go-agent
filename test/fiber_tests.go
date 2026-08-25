@@ -24,6 +24,10 @@ func init() {
 		NewGeneralTestCase("basic-fiberv2-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2),
 		NewGeneralTestCase("basic-fiberv2s-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2Https),
 		NewGeneralTestCase("basic-fiberv2-metrics-test", fiberv2_module_name, "", "", "1.18", "", TestBasicFiberv2Metrics),
+		NewGeneralTestCase("fiberv2-capture-test", fiberv2_module_name, "", "", "1.18", "", TestFiberv2Capture),
+		NewGeneralTestCase("fiberv2-capture-disabled-test", fiberv2_module_name, "", "", "1.18", "", TestFiberv2CaptureDisabled),
+		NewGeneralTestCase("fiberv2-capture-headers-only-test", fiberv2_module_name, "", "", "1.18", "", TestFiberv2CaptureHeadersOnly),
+		NewGeneralTestCase("fiberv2-capture-body-only-test", fiberv2_module_name, "", "", "1.18", "", TestFiberv2CaptureBodyOnly),
 		NewLatestDepthTestCase("fiberv2-latestdepth", fiberv2_dependency_name, fiberv2_module_name, "v2.43.0", "", "1.18", "", TestBasicFiberv2),
 		NewMuzzleTestCase("fiberv2-muzzle", fiberv2_dependency_name, fiberv2_module_name, "v2.43.0", "", "1.18", "", []string{"go", "build", "fiber_http.go"}))
 }
@@ -44,4 +48,48 @@ func TestBasicFiberv2Metrics(t *testing.T, env ...string) {
 	UseApp("fiberv2/v2.43.0")
 	RunGoBuild(t, "go", "build", "fiber_http_metrics.go")
 	RunApp(t, "fiber_http_metrics", env...)
+}
+
+func TestFiberv2Capture(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
+}
+
+func TestFiberv2CaptureDisabled(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
+}
+
+func TestFiberv2CaptureHeadersOnly(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=content-type,x-request-id",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=false",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
+}
+
+func TestFiberv2CaptureBodyOnly(t *testing.T, env ...string) {
+	UseApp("fiberv2/v2.43.0")
+	RunGoBuild(t, "go", "build", "fiber_capture.go")
+	envs := append([]string{
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_REQUEST_HEADERS=",
+		"LOONGSUITE_HTTP_CAPTURE_ALL_REQUEST_HEADERS=false",
+		"OTEL_INSTRUMENTATION_HTTP_CAPTURE_BODY_ENABLED=true",
+	}, env...)
+	RunApp(t, "fiber_capture", envs...)
 }

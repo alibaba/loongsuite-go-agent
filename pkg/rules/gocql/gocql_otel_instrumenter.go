@@ -62,6 +62,7 @@ func BuildGocqlInstrumenter() instrumenter.Instrumenter[gocqlRequest, interface{
 	getter := gogpAttrsGetter{}
 	return builder.Init().SetSpanNameExtractor(&db.DBSpanNameExtractor[gocqlRequest]{Getter: getter}).SetSpanKindExtractor(&instrumenter.AlwaysClientExtractor[gocqlRequest]{}).
 		AddAttributesExtractor(&db.DbClientAttrsExtractor[gocqlRequest, any, gogpAttrsGetter]{Base: db.DbClientCommonAttrsExtractor[gocqlRequest, any, gogpAttrsGetter]{Getter: getter}}).
+		AddOperationListeners(db.DbClientMetrics("nosql.gocql")).
 		SetInstrumentationScope(instrumentation.Scope{
 			Name:    utils.GOCQL_SCOPE_NAME,
 			Version: version.Tag,

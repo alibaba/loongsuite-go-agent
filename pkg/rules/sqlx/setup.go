@@ -71,6 +71,9 @@ func afterConnect(ctx api.CallContext, db *sqlx.DB, err error) {
 
 //go:linkname beforeQueryx github.com/jmoiron/sqlx.beforeQueryx
 func beforeQueryx(ctx api.CallContext, db *sqlx.DB, query string, args ...interface{}) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := sqlxRequest{
 		opType:     extractOpType(query),
 		statement:  query,
@@ -85,12 +88,18 @@ func beforeQueryx(ctx api.CallContext, db *sqlx.DB, query string, args ...interf
 
 //go:linkname afterQueryx github.com/jmoiron/sqlx.afterQueryx
 func afterQueryx(ctx api.CallContext, _ *sqlx.Rows, err error) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := ctx.GetData().(sqlxRequest)
 	sqlInstrumenter.End(context.Background(), request, nil, err)
 }
 
 //go:linkname beforeQueryRowx github.com/jmoiron/sqlx.beforeQueryRowx
 func beforeQueryRowx(ctx api.CallContext, db *sqlx.DB, query string, args ...interface{}) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := sqlxRequest{
 		opType:     extractOpType(query),
 		statement:  query,
@@ -105,12 +114,18 @@ func beforeQueryRowx(ctx api.CallContext, db *sqlx.DB, query string, args ...int
 
 //go:linkname afterQueryRowx github.com/jmoiron/sqlx.afterQueryRowx
 func afterQueryRowx(ctx api.CallContext, row *sqlx.Row) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := ctx.GetData().(sqlxRequest)
 	sqlInstrumenter.End(context.Background(), request, nil, row.Err())
 }
 
 //go:linkname beforeNamedExec github.com/jmoiron/sqlx.beforeNamedExec
 func beforeNamedExec(ctx api.CallContext, db *sqlx.DB, query string, arg interface{}) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := sqlxRequest{
 		opType:     extractOpType(query),
 		statement:  query,
@@ -125,12 +140,18 @@ func beforeNamedExec(ctx api.CallContext, db *sqlx.DB, query string, arg interfa
 
 //go:linkname afterNamedExec github.com/jmoiron/sqlx.afterNamedExec
 func afterNamedExec(ctx api.CallContext, _ sql.Result, err error) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := ctx.GetData().(sqlxRequest)
 	sqlInstrumenter.End(context.Background(), request, nil, err)
 }
 
 //go:linkname beforeQueryxContext github.com/jmoiron/sqlx.beforeQueryxContext
 func beforeQueryxContext(ctx api.CallContext, db *sqlx.DB, _ context.Context, query string, args ...interface{}) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := sqlxRequest{
 		opType:     extractOpType(query),
 		statement:  query,
@@ -145,12 +166,18 @@ func beforeQueryxContext(ctx api.CallContext, db *sqlx.DB, _ context.Context, qu
 
 //go:linkname afterQueryxContext github.com/jmoiron/sqlx.afterQueryxContext
 func afterQueryxContext(ctx api.CallContext, _ *sqlx.Rows, err error) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := ctx.GetData().(sqlxRequest)
 	sqlInstrumenter.End(context.Background(), request, nil, err)
 }
 
 //go:linkname beforeQueryRowxContext github.com/jmoiron/sqlx.beforeQueryRowxContext
 func beforeQueryRowxContext(ctx api.CallContext, db *sqlx.DB, _ context.Context, query string, args ...interface{}) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := sqlxRequest{
 		opType:     extractOpType(query),
 		statement:  query,
@@ -165,6 +192,9 @@ func beforeQueryRowxContext(ctx api.CallContext, db *sqlx.DB, _ context.Context,
 
 //go:linkname afterQueryRowxContext github.com/jmoiron/sqlx.afterQueryRowxContext
 func afterQueryRowxContext(ctx api.CallContext, row *sqlx.Row) {
+	if !sqlxEnabler.Enable() {
+		return
+	}
 	request := ctx.GetData().(sqlxRequest)
 	sqlInstrumenter.End(context.Background(), request, nil, row.Err())
 }

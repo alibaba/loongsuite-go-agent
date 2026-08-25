@@ -24,7 +24,7 @@ type goRueidisAttrsGetter struct {
 }
 
 func (d goRueidisAttrsGetter) GetSystem(request *goRueidisRequest) string {
-	return "rueidis"
+	return "redis"
 }
 
 func (d goRueidisAttrsGetter) GetServerAddress(request *goRueidisRequest) string {
@@ -68,5 +68,6 @@ func BuildGoRueidisOtelInstrumenter() instrumenter.Instrumenter[*goRueidisReques
 	getter := goRueidisAttrsGetter{}
 	return builder.Init().SetSpanNameExtractor(&db.DBSpanNameExtractor[*goRueidisRequest]{Getter: getter}).SetSpanKindExtractor(&instrumenter.AlwaysClientExtractor[*goRueidisRequest]{}).
 		AddAttributesExtractor(&db.DbClientAttrsExtractor[*goRueidisRequest, any, db.DbClientAttrsGetter[*goRueidisRequest]]{Base: db.DbClientCommonAttrsExtractor[*goRueidisRequest, any, db.DbClientAttrsGetter[*goRueidisRequest]]{Getter: getter}}).
+		AddOperationListeners(db.DbClientMetrics("nosql.rueidis")).
 		BuildInstrumenter()
 }

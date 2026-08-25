@@ -73,7 +73,7 @@ func clientTrpcOnExit(call api.CallContext, err error) {
 		statusCode = int(request.msg.ServerRspErr().Code)
 	}
 	trpcClientInstrumenter.End(ctx, request, trpcRes{
-		stausCode: statusCode,
+		statusCode: statusCode,
 	}, err)
 }
 

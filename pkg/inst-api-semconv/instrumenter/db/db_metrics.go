@@ -32,6 +32,7 @@ const db_client_request_duration = "db.client.request.duration"
 type DbClientMetric struct {
 	key                   attribute.Key
 	clientRequestDuration metric.Float64Histogram
+	initOnce              sync.Once
 }
 
 var mu sync.Mutex
@@ -41,6 +42,7 @@ var dbMetricsConv = map[attribute.Key]bool{
 	semconv.DBOperationNameKey: true,
 	semconv.ServerAddressKey:   true,
 	semconv.DBNamespaceKey:     true,
+	semconv.ErrorTypeKey:       true,
 }
 
 var globalMeter metric.Meter
@@ -64,12 +66,24 @@ func newDbClientMetric(key string, meter metric.Meter) (*DbClientMetric, error) 
 	m := &DbClientMetric{
 		key: attribute.Key(key),
 	}
-	d, err := newDbClientRequestDurationMeasures(meter)
+	var err error
+	m.initOnce.Do(func() {
+		m.clientRequestDuration, err = newDbClientRequestDurationMeasures(meter)
+	})
 	if err != nil {
 		return nil, err
 	}
-	m.clientRequestDuration = d
 	return m, nil
+}
+
+func (h *DbClientMetric) ensureDuration() {
+	h.initOnce.Do(func() {
+		var err error
+		h.clientRequestDuration, err = newDbClientRequestDurationMeasures(globalMeter)
+		if err != nil {
+			log.Printf("failed to create clientRequestDuration: %v\n", err)
+		}
+	})
 }
 
 func newDbClientRequestDurationMeasures(meter metric.Meter) (metric.Float64Histogram, error) {
@@ -93,36 +107,38 @@ type dbMetricContext struct {
 	startAttributes []attribute.KeyValue
 }
 
-func (h DbClientMetric) OnBeforeStart(parentContext context.Context, startTime time.Time) context.Context {
+func (h *DbClientMetric) OnBeforeStart(parentContext context.Context, startTime time.Time) context.Context {
 	return parentContext
 }
 
-func (h DbClientMetric) OnBeforeEnd(ctx context.Context, startAttributes []attribute.KeyValue, startTime time.Time) context.Context {
+func (h *DbClientMetric) OnBeforeEnd(ctx context.Context, startAttributes []attribute.KeyValue, startTime time.Time) context.Context {
 	return context.WithValue(ctx, h.key, dbMetricContext{
 		startTime:       startTime,
 		startAttributes: startAttributes,
 	})
 }
 
-func (h DbClientMetric) OnAfterStart(context context.Context, endTime time.Time) {
+func (h *DbClientMetric) OnAfterStart(context context.Context, endTime time.Time) {
 	return
 }
 
-func (h DbClientMetric) OnAfterEnd(context context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
-	mc := context.Value(h.key).(dbMetricContext)
+func (h *DbClientMetric) OnAfterEnd(ctx context.Context, endAttributes []attribute.KeyValue, endTime time.Time) {
+	v := ctx.Value(h.key)
+	if v == nil {
+		log.Printf("DbClientMetric.OnAfterEnd: missing metric context for key %q; skipping record", h.key)
+		return
+	}
+	mc, ok := v.(dbMetricContext)
+	if !ok {
+		log.Printf("DbClientMetric.OnAfterEnd: invalid metric context type for key %q; skipping record", h.key)
+		return
+	}
 	startTime, startAttributes := mc.startTime, mc.startAttributes
 	// end attributes should be shadowed by AttrsShadower
-	if h.clientRequestDuration == nil {
-		var err error
-		// second change to init the metric
-		h.clientRequestDuration, err = newDbClientRequestDurationMeasures(globalMeter)
-		if err != nil {
-			log.Printf("failed to create clientRequestDuration, err is %v\n", err)
-		}
-	}
+	h.ensureDuration()
 	endAttributes = append(endAttributes, startAttributes...)
 	n, metricsAttrs := utils.Shadow(endAttributes, dbMetricsConv)
 	if h.clientRequestDuration != nil {
-		h.clientRequestDuration.Record(context, float64(endTime.Sub(startTime).Milliseconds()), metric.WithAttributeSet(attribute.NewSet(metricsAttrs[0:n]...)))
+		h.clientRequestDuration.Record(ctx, float64(endTime.Sub(startTime).Milliseconds()), metric.WithAttributeSet(attribute.NewSet(metricsAttrs[0:n]...)))
 	}
 }

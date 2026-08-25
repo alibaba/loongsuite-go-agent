@@ -1,0 +1,11 @@
+[
+  {
+    "Version": "[0.1.0,)",
+    "ImportPath": "trpc.group/trpc-go/trpc-agent-go/runner",
+    "Function": "Run",
+    "ReceiverType": "\\*runner",
+    "OnEnter": "runnerRunOnEnter",
+    "OnExit": "runnerRunOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/trpc-agent-go"
+  }
+]
