@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 
+	semconvhttp "github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/http"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -41,6 +42,25 @@ func SetServerRouteTemplate(r *http.Request, route string) {
 	if container, ok := r.Context().Value(routeContainerKey{}).(*routeTemplateContainer); ok && container != nil {
 		container.template = route
 	}
+}
+
+// captureServeMuxRoute copies ServeMux's matched Pattern into the route
+// container when middleware replaced *http.Request via WithContext and the
+// original request no longer carries Pattern. Framework hooks that already
+// set a template win; this only fills an empty container.
+func captureServeMuxRoute(r *http.Request) {
+	if r == nil || r.Pattern == "" {
+		return
+	}
+	container, ok := r.Context().Value(routeContainerKey{}).(*routeTemplateContainer)
+	if !ok || container == nil || container.template != "" {
+		return
+	}
+	route := semconvhttp.RouteFromPattern(r.Pattern)
+	if route == "" {
+		return
+	}
+	container.template = route
 }
 
 func takeServerRouteTemplate(ctx context.Context, r *http.Request) string {

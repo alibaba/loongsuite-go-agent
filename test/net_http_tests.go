@@ -29,6 +29,7 @@ func init() {
 		NewGeneralTestCase("nethttp-route-static-metrics-test", "nethttp", "", "", "1.23", "", TestHttpRouteStaticMetrics),
 		NewGeneralTestCase("nethttp-route-unavailable-test", "nethttp", "", "", "1.18", "", TestHttpRouteUnavailable),
 		NewGeneralTestCase("nethttp-route-unavailable-metrics-test", "nethttp", "", "", "1.18", "", TestHttpRouteUnavailableMetrics),
+		NewGeneralTestCase("nethttp-route-withcontext-middleware-test", "nethttp", "", "", "1.22", "", TestHttpRouteWithContextMiddleware),
 		NewGeneralTestCase("nethttp-capture-test", "nethttp", "", "", "1.18", "", TestHttpCapture),
 		NewGeneralTestCase("nethttp-capture-disabled-test", "nethttp", "", "", "1.18", "", TestHttpCaptureDisabled),
 		NewGeneralTestCase("nethttp-capture-headers-only-test", "nethttp", "", "", "1.18", "", TestHttpCaptureHeadersOnly),
@@ -100,6 +101,12 @@ func TestHttpRouteUnavailableMetrics(t *testing.T, env ...string) {
 	UseApp("nethttp")
 	RunGoBuild(t, "go", "build", "test_http_route_unavailable_metrics.go", "http_server.go")
 	RunApp(t, "test_http_route_unavailable_metrics", env...)
+}
+
+func TestHttpRouteWithContextMiddleware(t *testing.T, env ...string) {
+	UseApp("nethttp")
+	RunGoBuild(t, "go", "build", "test_http_route_withcontext_middleware.go", "http_server.go")
+	RunApp(t, "test_http_route_withcontext_middleware", env...)
 }
 
 func TestHttpCapture(t *testing.T, env ...string) {

@@ -112,6 +112,23 @@ func serverOnExit(call api.CallContext) {
 	return
 }
 
+// serveMuxOnExit records the matched ServeMux pattern into the route
+// container. Middleware that does r = r.WithContext(...) leaves Pattern on a
+// request copy; serverOnExit only sees the original *Request, so we bridge via
+// the context container injected in serverOnEnter.
+//
+//go:linkname serveMuxOnExit net/http.serveMuxOnExit
+func serveMuxOnExit(call api.CallContext) {
+	if !netHttpEnabler.Enable() {
+		return
+	}
+	r, ok := call.GetParam(2).(*http.Request)
+	if !ok || r == nil {
+		return
+	}
+	captureServeMuxRoute(r)
+}
+
 type writerWrapper struct {
 	http.ResponseWriter
 	statusCode           int
