@@ -12,6 +12,8 @@
 - `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`: 指定 OTLP 指标导出器的端点。
 - `OTEL_EXPORTER_OTLP_HEADERS`: 为所有 OTLP 导出器指定请求头 (例如, `key1=value1,key2=value2`)。
 - `OTEL_EXPORTER_PROMETHEUS_PORT`: 当 `OTEL_METRICS_EXPORTER` 设置为 `prometheus` 时，指定 Prometheus 导出器的端口。默认为 `9464`。
+- `OTEL_METRIC_EXPORT_INTERVAL`: 指定周期性指标读取器的指标导出周期，单位为毫秒。这是标准的 OpenTelemetry SDK 环境变量。
+- `OTEL_METRIC_EXPORT_INTERVALS`: 指定周期性指标读取器的多个指标导出周期，单位为毫秒，使用逗号分隔（例如 `1000,60000,3600000`）。这是 LoongSuite 扩展；设置了有效值后会覆盖 `OTEL_METRIC_EXPORT_INTERVAL`。该配置不作用于 Prometheus pull 导出器。每个周期导出的数据会带上 resource attribute `telemetry.metric.export.interval.ms`，方便 collector 按周期分开处理。该属性值是整数，collector 路由条件应使用数值比较，例如 `resource.attributes["telemetry.metric.export.interval.ms"] == 1000`。多个周期会增加应用侧导出工作量；如果同时配置多个 exporter，周期性 reader 数量约为 `len(exporters) * len(intervals)`。
 - `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE`: 指定指标的聚合时间性偏好（不区分大小写）。支持的值:
   - `cumulative` (默认): 所有指标类型都使用累积时间性
   - `delta`: Counter、Asynchronous Counter 和 Histogram 使用增量时间性；UpDownCounter 和 Asynchronous UpDownCounter 使用累积时间性
