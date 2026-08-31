@@ -22,6 +22,12 @@ import (
 func TestNewSpanSampler(t *testing.T) {
 	const parentBasedAlwaysOn = "ParentBased{root:AlwaysOnSampler"
 
+	// Since OTel v1.43 the trace-ratio sampler no longer substitutes
+	// AlwaysSample() for a ratio of 1, so the description is the
+	// spec-compliant one for the ratio instead.
+	const ratioOne = "TraceIDRatioBased{1}"
+	const parentBasedRatioOne = "ParentBased{root:" + ratioOne
+
 	tests := []struct {
 		name     string
 		legacy   string
@@ -60,21 +66,22 @@ func TestNewSpanSampler(t *testing.T) {
 		{"xray", "", "xray", "", parentBasedAlwaysOn},
 		{"unknown", "", "not_a_sampler", "", parentBasedAlwaysOn},
 
-		// An unusable ratio falls back to 1.0, which is AlwaysOn.
-		{"missing arg", "", "traceidratio", "", "AlwaysOnSampler"},
-		{"invalid arg", "", "traceidratio", "abc", "AlwaysOnSampler"},
-		{"arg above range", "", "traceidratio", "5", "AlwaysOnSampler"},
-		{"arg below range", "", "traceidratio", "-1", "AlwaysOnSampler"},
-		{"arg NaN", "", "traceidratio", "NaN", "AlwaysOnSampler"},
-		{"arg Inf", "", "traceidratio", "Inf", "AlwaysOnSampler"},
+		// An unusable ratio falls back to ratio 1.0, whose spec-compliant
+		// description is TraceIDRatioBased{1}.
+		{"missing arg", "", "traceidratio", "", ratioOne},
+		{"invalid arg", "", "traceidratio", "abc", ratioOne},
+		{"arg above range", "", "traceidratio", "5", ratioOne},
+		{"arg below range", "", "traceidratio", "-1", ratioOne},
+		{"arg NaN", "", "traceidratio", "NaN", ratioOne},
+		{"arg Inf", "", "traceidratio", "Inf", ratioOne},
 
 		// The same fallbacks reach the parent-based variant.
-		{"parentbased missing arg", "", "parentbased_traceidratio", "", parentBasedAlwaysOn},
-		{"parentbased invalid arg", "", "parentbased_traceidratio", "abc", parentBasedAlwaysOn},
-		{"parentbased arg above range", "", "parentbased_traceidratio", "5", parentBasedAlwaysOn},
-		{"parentbased arg below range", "", "parentbased_traceidratio", "-1", parentBasedAlwaysOn},
-		{"parentbased arg NaN", "", "parentbased_traceidratio", "NaN", parentBasedAlwaysOn},
-		{"parentbased arg Inf", "", "parentbased_traceidratio", "Inf", parentBasedAlwaysOn},
+		{"parentbased missing arg", "", "parentbased_traceidratio", "", parentBasedRatioOne},
+		{"parentbased invalid arg", "", "parentbased_traceidratio", "abc", parentBasedRatioOne},
+		{"parentbased arg above range", "", "parentbased_traceidratio", "5", parentBasedRatioOne},
+		{"parentbased arg below range", "", "parentbased_traceidratio", "-1", parentBasedRatioOne},
+		{"parentbased arg NaN", "", "parentbased_traceidratio", "NaN", parentBasedRatioOne},
+		{"parentbased arg Inf", "", "parentbased_traceidratio", "Inf", parentBasedRatioOne},
 	}
 
 	for _, tt := range tests {
