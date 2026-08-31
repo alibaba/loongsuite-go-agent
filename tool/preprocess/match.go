@@ -17,6 +17,8 @@ package preprocess
 import (
 	"bufio"
 	"encoding/json"
+	"go/scanner"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,15 +37,33 @@ import (
 )
 
 type ruleMatcher struct {
-	availableRules map[string][]rules.InstRule
-	moduleVersions []*vendorModule // vendor used only
-	projectDeps    map[string]bool // actual dependencies from dry run commands
+	availableRules    map[string][]rules.InstRule
+	moduleVersions    []*vendorModule     // vendor used only
+	projectDeps       map[string]bool     // actual dependencies from dry run commands
+	targetIdentifiers map[string][]string // map importPath to target identifiers for pre-filtering
 }
 
 func newRuleMatcher(compileCmds []string) *ruleMatcher {
 	availableRules := make(map[string][]rules.InstRule)
+	targetIdentifiers := make(map[string][]string)
+
 	for _, rule := range findAvailableRules() {
-		availableRules[rule.GetImportPath()] = append(availableRules[rule.GetImportPath()], rule)
+		// Precompute target identifiers for each import path
+		importPath := rule.GetImportPath()
+		switch r := rule.(type) {
+		case *rules.InstFuncRule:
+			// Add function name as a target identifier
+			targetIdentifiers[importPath] = append(targetIdentifiers[importPath], r.Function)
+			// Add receiver type if present
+			if r.ReceiverType != "" {
+				targetIdentifiers[importPath] = append(targetIdentifiers[importPath], r.ReceiverType)
+			}
+		case *rules.InstStructRule:
+			// Add struct type as a target identifier
+			targetIdentifiers[importPath] = append(targetIdentifiers[importPath], r.StructType)
+		}
+
+		availableRules[importPath] = append(availableRules[importPath], rule)
 	}
 	if config.GetConf().Verbose {
 		util.Log("Available rules: %v", availableRules)
@@ -402,6 +422,12 @@ func (rm *ruleMatcher) match(cmdArgs []string) *rules.InstRuleSet {
 			continue
 		}
 
+		// Pre-filtering: check if the file contains any target identifiers before parsing AST
+		targetIdentifiers := rm.targetIdentifiers[importPath]
+		if len(targetIdentifiers) > 0 && !rm.hasTargetIdentifiers(file, targetIdentifiers) {
+			continue // Skip this file as it doesn't contain any target identifiers
+		}
+
 		// If it's a vendor build, we need to extract the version of the module
 		// from vendor/modules.txt, otherwise we find the version from source
 		// code file path
@@ -670,4 +696,41 @@ func (dp *DepProcessor) matchRules() ([]*rules.InstRuleSet, error) {
 		cnt++
 	}
 	return bundles, nil
+}
+
+func (rm *ruleMatcher) hasTargetIdentifiers(filePath string, targetIdentifiers []string) bool {
+	if len(targetIdentifiers) == 0 {
+		return true // If no targets, consider all files as matching
+	}
+
+	src, err := os.ReadFile(filePath)
+	if err != nil {
+		util.Log("Failed to read file: %v", err)
+		return false
+	}
+
+	var scanner scanner.Scanner
+	var fs token.FileSet
+
+	f := fs.AddFile("", fs.Base(), len(src))
+	scanner.Init(f, src, nil, 0)
+
+	// Scan through all tokens in the file
+	for {
+		_, tok, lit := scanner.Scan() // ignore pos as we don't need it
+		if tok == token.EOF {
+			break
+		}
+
+		// Check if the token is an identifier that matches any target
+		if tok == token.IDENT {
+			for _, target := range targetIdentifiers {
+				if lit == target {
+					return true // Found a target identifier
+				}
+			}
+		}
+	}
+
+	return false
 }
