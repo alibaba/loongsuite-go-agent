@@ -30,10 +30,10 @@ const (
 
 // InstrumentationMetadata contains metadata for each instrumentation scope
 type InstrumentationMetadata struct {
-	ScopeName      string
-	Category       InstrumentationCategory
-	ClientKey      attribute.Key
-	ServerKey      attribute.Key
+	ScopeName string
+	Category  InstrumentationCategory
+	ClientKey attribute.Key
+	ServerKey attribute.Key
 }
 
 // InstrumentationRegistry maps scope names to their metadata
@@ -135,6 +135,12 @@ var InstrumentationRegistry = map[string]*InstrumentationMetadata{
 	},
 	"loongsuite.instrumentation.goredisv8": {
 		ScopeName: "loongsuite.instrumentation.goredisv8",
+		Category:  CategoryDB,
+		ClientKey: DB_CLIENT_KEY,
+		ServerKey: "",
+	},
+	"loongsuite.instrumentation.gomysql": {
+		ScopeName: "loongsuite.instrumentation.gomysql",
 		Category:  CategoryDB,
 		ClientKey: DB_CLIENT_KEY,
 		ServerKey: "",

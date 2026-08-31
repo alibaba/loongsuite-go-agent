@@ -30,6 +30,6 @@ type DbClientAttrsGetter[REQUEST any] interface {
 }
 
 type SqlClientAttributesGetter[REQUEST any] interface {
-	DbClientCommonAttrsGetter[REQUEST]
-	GetRawStatement(REQUEST) string
+	DbClientAttrsGetter[REQUEST]
+	GetConnectionId(REQUEST) string
 }

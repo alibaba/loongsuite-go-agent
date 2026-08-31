@@ -102,6 +102,7 @@ The detailed usage of `otel` tool can be found in [**Usage**](./docs/user/config
 | gin                | https://github.com/gin-gonic/gin                | v1.7.0      | v1.10.2     |
 | go-kit/log         | https://github.com/go-kit/log                   | v0.1.0      | v0.2.2      |
 | go-micro           | https://github.com/micro/go-micro               | v5.0.0      | v5.3.1      |
+| go-mysql  | https://github.com/go-mysql-org/go-mysql      | v1.11.0  | v1.14.0     |
 | go-openai          | https://github.com/sashabaranov/go-openai       | v1.30.0     | -           |
 | gocql              | https://github.com/gocql/gocql                  | v1.3.0      | v1.7.1      |
 | google-genai       | https://pkg.go.dev/google.golang.org/genai      | v1.30.0     | -           |

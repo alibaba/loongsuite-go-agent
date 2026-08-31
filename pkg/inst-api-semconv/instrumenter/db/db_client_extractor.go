@@ -126,6 +126,12 @@ func (d *DbClientAttrsExtractor[REQUEST, RESPONSE, GETTER]) OnEnd(attrs []attrib
 			}
 		}
 	}
+	if getter, ok := any(d.Base.Getter).(SqlClientAttributesGetter[REQUEST]); ok {
+		connectionId := getter.GetConnectionId(request)
+		if connectionId != "" {
+			attrs = append(attrs, attribute.KeyValue{Key: "db.connectionId", Value: attribute.StringValue(connectionId)})
+		}
+	}
 	return attrs, context
 }
 
