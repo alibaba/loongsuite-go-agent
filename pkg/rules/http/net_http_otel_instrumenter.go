@@ -232,8 +232,24 @@ func BuildNetHttpClientOtelInstrumenter() *instrumenter.PropagatingToDownstreamI
 		if n.header == nil {
 			return nil
 		}
-		return propagation.HeaderCarrier(n.header)
+		return nonOverwritingCarrier{propagation.HeaderCarrier(n.header)}
 	}, otel.GetTextMapPropagator())
+}
+
+// nonOverwritingCarrier keeps propagation headers that are already present
+// on the outgoing request. Clients that sign requests and reuse them across
+// retries (aws-sdk-go SigV4) fold the current header value into the
+// signature, so overwriting traceparent/tracestate after re-signing
+// invalidates it (#742).
+type nonOverwritingCarrier struct {
+	propagation.TextMapCarrier
+}
+
+func (c nonOverwritingCarrier) Set(key, value string) {
+	if c.TextMapCarrier.Get(key) != "" {
+		return
+	}
+	c.TextMapCarrier.Set(key, value)
 }
 
 func BuildNetHttpServerOtelInstrumenter() *instrumenter.PropagatingFromUpstreamInstrumenter[*netHttpRequest, *netHttpResponse] {
