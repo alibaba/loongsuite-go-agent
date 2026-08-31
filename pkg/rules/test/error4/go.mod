@@ -1,6 +1,6 @@
 module github.com/alibaba/loongsuite-go/pkg/rules/error4
 
-go 1.24.0
+go 1.25.0
 
 replace github.com/alibaba/loongsuite-go/pkg => ../../../
 

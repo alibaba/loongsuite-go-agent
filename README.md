@@ -10,6 +10,12 @@ time. Simply adding `otel` prefix to `go build` to get started :rocket:
 
 # Installation
 
+> [!IMPORTANT]
+> **Requires Go 1.25 or newer.** `loongsuite-go` pins OpenTelemetry v1.45.0, and
+> the OTel modules declare `go 1.25.0` from v1.42.0 onward. Since the tool injects
+> those modules into the application it instruments, both the tool and the
+> instrumented application need Go 1.25+. See [compatibility](docs/user/compatibility.md).
+
 ### Prebuilt Binaries
 
 - [![Download](https://shields.io/badge/-Linux_AMD64-blue?logo=ubuntu)](https://github.com/alibaba/loongsuite-go/releases/latest/download/otel-linux-amd64)
@@ -154,7 +160,7 @@ We are progressively open-sourcing the libraries we have supported, and your con
 # Community
 
 We are looking forward to your feedback and suggestions. You can join
-our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,mexukXI88tZ1uiuLYkKhdaETUx/K59ncyFFFG5Voe9s=&_dt_no_comment=1&origin=11?) or scan the QR code below to engage with us.
+our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,mexukXI88tZ1uiuLYkKhdaETUx/K59ncyFFFG5Voe9s=&_dt_no_comment=1&origin=11) or scan the QR code below to engage with us.
 
 | LoongCollector SIG | LoongSuite Python SIG |
 |----|----|

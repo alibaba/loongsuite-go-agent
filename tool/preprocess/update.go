@@ -31,19 +31,19 @@ const (
 )
 
 var otelDeps = map[string]string{
-	"go.opentelemetry.io/otel":                                          "v1.40.0",
-	"go.opentelemetry.io/otel/sdk":                                      "v1.40.0",
-	"go.opentelemetry.io/otel/trace":                                    "v1.40.0",
-	"go.opentelemetry.io/otel/metric":                                   "v1.40.0",
-	"go.opentelemetry.io/otel/sdk/metric":                               "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace":                 "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc":   "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp":   "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc": "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp": "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/prometheus":                     "v0.61.0",
-	"go.opentelemetry.io/contrib/instrumentation/runtime":               "v0.65.0",
-	"google.golang.org/protobuf":                                        "v1.36.10",
+	"go.opentelemetry.io/otel":                                          "v1.45.0",
+	"go.opentelemetry.io/otel/sdk":                                      "v1.45.0",
+	"go.opentelemetry.io/otel/trace":                                    "v1.45.0",
+	"go.opentelemetry.io/otel/metric":                                   "v1.45.0",
+	"go.opentelemetry.io/otel/sdk/metric":                               "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace":                 "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc":   "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp":   "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc": "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp": "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/prometheus":                     "v0.67.0",
+	"go.opentelemetry.io/contrib/instrumentation/runtime":               "v0.70.0",
+	"google.golang.org/protobuf":                                        "v1.36.11",
 	// Fix "ambiguous import" between legacy monolithic genproto and split genproto modules:
 	//
 	// Old versions of the monolithic module `google.golang.org/genproto` included packages
@@ -56,9 +56,9 @@ var otelDeps = map[string]string{
 	// By forcing the monolithic module to a post-split version, it no longer "owns" those
 	// packages, and the ambiguity is resolved without pinning the user's gRPC version.
 	"google.golang.org/genproto":                             "v0.0.0-20251202230838-ff82c1b0f217",
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric": "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace":  "v1.40.0",
-	"go.opentelemetry.io/otel/exporters/zipkin":              "v1.40.0",
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric": "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace":  "v1.45.0",
+	"go.opentelemetry.io/otel/exporters/zipkin":              "v1.45.0",
 }
 
 func parseGoMod(gomod string) (*modfile.File, error) {

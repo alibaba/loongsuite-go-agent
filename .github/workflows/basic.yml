@@ -32,6 +32,12 @@ jobs:
     strategy:
       # If you want to matrix build , you can append the following list.
       matrix:
+        # Go 1.24 is kept deliberately: modules declare `go 1.25.0` (required by
+        # OTel >= 1.42), so a 1.24 runner exercises the GOTOOLCHAIN=auto upgrade
+        # path that users on 1.24 rely on. Go 1.26 is held back until
+        # bytedance/sonic >= v1.15.0 is picked up - v1.14.1 gates GoMapIterator
+        # behind !go1.26, which breaks the eino and hertz builds.
+        # See https://github.com/bytedance/sonic/issues/895
         go_version:
           - 1.24
           - 1.25
