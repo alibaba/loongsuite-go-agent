@@ -15,6 +15,7 @@
 package preprocess
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/alibaba/loongsuite-go/tool/rules"
 	"github.com/alibaba/loongsuite-go/tool/util"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -248,4 +250,57 @@ func (dp *DepProcessor) updateGoMod() error {
 		}
 	}
 	return nil
+}
+
+// warnDependencyUpgrades reports dependencies that the instrumentation graph
+// resolves to a higher version than the one pinned in the user's original
+// go.mod. The user's go.mod is restored after the build, but the binary is
+// still compiled against the upgraded versions, which can break projects that
+// depend on locked versions (#386, #387).
+func (dp *DepProcessor) warnDependencyUpgrades() {
+	backup, ok := dp.backups[dp.getGoModPath()]
+	if !ok {
+		return
+	}
+	orig, err := parseGoMod(backup)
+	if err != nil {
+		return
+	}
+	cur, err := parseGoMod(dp.getGoModPath())
+	if err != nil {
+		return
+	}
+	upgraded := func(from, to string) bool {
+		if !semver.IsValid(from) {
+			from = "v" + from // go directive versions carry no prefix
+		}
+		if !semver.IsValid(to) {
+			to = "v" + to
+		}
+		return semver.IsValid(from) && semver.IsValid(to) &&
+			semver.Compare(to, from) > 0
+	}
+	origVer := make(map[string]string, len(orig.Require))
+	for _, r := range orig.Require {
+		origVer[r.Mod.Path] = r.Mod.Version
+	}
+	lines := make([]string, 0, 4)
+	for _, r := range cur.Require {
+		if from, ok := origVer[r.Mod.Path]; ok && upgraded(from, r.Mod.Version) {
+			lines = append(lines, fmt.Sprintf("  %s %s -> %s", r.Mod.Path, from, r.Mod.Version))
+		}
+	}
+	if orig.Go != nil && cur.Go != nil && upgraded(orig.Go.Version, cur.Go.Version) {
+		lines = append(lines, fmt.Sprintf("  go directive %s -> %s", orig.Go.Version, cur.Go.Version))
+	}
+	if len(lines) == 0 {
+		return
+	}
+	fmt.Fprintln(os.Stderr, "WARNING: instrumentation resolves dependencies pinned in your go.mod to newer versions,")
+	fmt.Fprintln(os.Stderr, "the binary is built against them even though your go.mod is restored afterwards:")
+	for _, line := range lines {
+		fmt.Fprintln(os.Stderr, line)
+	}
+	fmt.Fprintln(os.Stderr, "If your project relies on the pinned versions, pin them with replace directives or")
+	fmt.Fprintln(os.Stderr, "exclude the rule via OTEL_INSTRUMENTATION_*_ENABLED=false (see issue #386).")
 }
