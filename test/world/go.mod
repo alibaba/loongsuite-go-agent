@@ -8,6 +8,7 @@ require (
 	dubbo.apache.org/dubbo-go/v3 v3.3.0
 	github.com/alibaba/sentinel-golang v1.0.4
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/cloudwego/eino v0.3.51
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.16
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.1
@@ -22,6 +23,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mark3labs/mcp-go v0.20.0
+	github.com/neo4j/neo4j-go-driver/v6 v6.2.0
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/sirupsen/logrus v1.9.3
 	github.com/valyala/fasthttp v1.57.0

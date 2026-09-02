@@ -1,14 +1,14 @@
 module github.com/alibaba/loongsuite-go/pkg/rules/nacos/service_holder
 
-go 1.24.0
+go 1.25.0
 
 replace github.com/alibaba/loongsuite-go/pkg => ../../../../pkg
 
 require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/nacos-group/nacos-sdk-go/v2 v2.0.0
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/metric v1.45.0
 )
 
 require (

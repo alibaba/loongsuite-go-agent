@@ -17,24 +17,32 @@ testing for the oldest (now archived upstream) version of Go. This, and
 future, releases of `loongsuite-go` may include features only supported by
 the currently supported versions of Go.
 
+> [!IMPORTANT]
+> **Minimum Go version: 1.25.** Since OpenTelemetry v1.42.0 the OTel modules
+> declare `go 1.25.0`, and `loongsuite-go` pins OTel v1.45.0. Because the tool
+> injects those modules into the application it instruments, both the tool and
+> the instrumented application require Go 1.25 or newer. A Go 1.24 build only
+> keeps working because the default `GOTOOLCHAIN=auto` silently downloads a
+> 1.25 toolchain; with `GOTOOLCHAIN=local` it fails.
+
 This project is tested on the following systems.
 
 | OS       | Go Version | Architecture |
 | -------- | ---------- | ------------ |
 | Ubuntu   | 1.24       | amd64        |
-| Ubuntu   | 1.23       | amd64        |
+| Ubuntu   | 1.25       | amd64        |
 | Ubuntu   | 1.24       | 386          |
-| Ubuntu   | 1.23       | 386          |
+| Ubuntu   | 1.25       | 386          |
 | Ubuntu   | 1.24       | arm64        |
-| Ubuntu   | 1.23       | arm64        |
+| Ubuntu   | 1.25       | arm64        |
 | macOS 13 | 1.24       | amd64        |
-| macOS 13 | 1.23       | amd64        |
+| macOS 13 | 1.25       | amd64        |
 | macOS    | 1.24       | arm64        |
-| macOS    | 1.23       | arm64        |
+| macOS    | 1.25       | arm64        |
 | Windows  | 1.24       | amd64        |
-| Windows  | 1.23       | amd64        |
+| Windows  | 1.25       | amd64        |
 | Windows  | 1.24       | 386          |
-| Windows  | 1.23       | 386          |
+| Windows  | 1.25       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.

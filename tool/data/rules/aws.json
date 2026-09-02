@@ -1,0 +1,16 @@
+[
+  {
+    "Version": "[1.55.5,)",
+    "ImportPath": "github.com/aws/aws-sdk-go/aws/session",
+    "Function": "NewSession",
+    "OnExit": "newSessionOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/aws-sdk-go"
+  },
+  {
+    "Version": "[1.55.5,)",
+    "ImportPath": "github.com/aws/aws-sdk-go/aws/session",
+    "Function": "NewSessionWithOptions",
+    "OnExit": "newSessionWithOptionsOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/aws-sdk-go"
+  }
+]

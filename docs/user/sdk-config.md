@@ -16,5 +16,17 @@ In addition to automatic instrumentation, the `otel` tool injects configuration 
   - `cumulative` (default): All instrument kinds use Cumulative temporality
   - `delta`: Counter, Asynchronous Counter, and Histogram use Delta temporality; UpDownCounter and Asynchronous UpDownCounter use Cumulative temporality
   - `lowmemory`: Synchronous Counter and Histogram use Delta temporality; other types use Cumulative temporality (low memory mode)
-- `OTEL_TRACE_SAMPLER`: Specifies the trace sampler. A floating-point number between 0.0 and 1.0 sets a ratio-based sampler. Values <= 0 will never sample, and values >= 1 will always sample. The default is a parent-based sampler that always samples.
+- `OTEL_TRACES_SAMPLER`: Specifies the trace sampler using the standard OpenTelemetry SDK values (case-insensitive). Supported values:
+  - `always_on`, `always_off`
+  - `traceidratio`, `parentbased_traceidratio`: the ratio is read from `OTEL_TRACES_SAMPLER_ARG`
+  - `parentbased_always_on` (specification default), `parentbased_always_off`
+  - `jaeger_remote`, `parentbased_jaeger_remote` and `xray` are not supported and fall back to the default sampler.
+- `OTEL_TRACES_SAMPLER_ARG`: Argument for the selected sampler. It is only read by the `traceidratio` and `parentbased_traceidratio` samplers and ignored by the others. It is a floating-point number between 0.0 and 1.0; a missing, unparsable or out-of-range value is logged and falls back to `1.0`.
+- `OTEL_TRACE_SAMPLER`: Agent-specific shorthand that predates the standard variables and **takes precedence over them** when set. A floating-point number between 0.0 and 1.0 sets a ratio-based sampler. Values <= 0 will never sample, and values >= 1 will always sample.
+
+  When neither `OTEL_TRACE_SAMPLER` nor `OTEL_TRACES_SAMPLER` is set, the default is a parent-based sampler that always samples.
+
+  Note that the two variables are not interchangeable: `OTEL_TRACE_SAMPLER=0.5` builds a **parent-based** ratio sampler, whereas `OTEL_TRACES_SAMPLER=traceidratio` with `OTEL_TRACES_SAMPLER_ARG=0.5` builds a **non** parent-based one. Use `parentbased_traceidratio` to keep the previous behaviour.
+
+  **Upgrading**: releases before standard sampler support ignored `OTEL_TRACES_SAMPLER` entirely. If your platform already injects it, sampling will change once you upgrade. Set `OTEL_TRACE_SAMPLER` explicitly to keep the sampler you have today.
 - `OTEL_INSTRUMENTATION_HTTP_EXCLUDE_PATHS`: Specifies a regular expression pattern to exclude URL paths from HTTP auto-instrumentation (e.g., `^/(ping|health|metrics)$`). Requests whose paths match the pattern will not generate spans. By default, no paths are excluded.

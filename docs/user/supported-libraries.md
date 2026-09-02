@@ -6,6 +6,7 @@
 | amqp091            | https://github.com/rabbitmq/amqp091-go            | v1.10.0     | -           |
 | anthropic-sdk-go   | https://github.com/anthropics/anthropic-sdk-go    | v1.25.0     | -           |
 | asynq              | https://github.com/hibiken/asynq                  | v0.23.0     | v0.26.0     |
+| aws-sdk-go         | https://github.com/aws/aws-sdk-go                 | v1.55.5     | -           |
 | clickhouse/v2      | https://github.com/ClickHouse/clickhouse-go/v2    | v2.13.0     | -           |
 | database/sql       | https://pkg.go.dev/database/sql                   | -           | -           |
 | deepseek           | https://github.com/cohesion-org/deepseek-go       | v1.3.0      | -           |
@@ -13,7 +14,7 @@
 | echo               | https://github.com/labstack/echo                  | v4.0.0      | -           |
 | elasticsearch      | https://github.com/elastic/go-elasticsearch       | v8.4.0      | v8.15.1     |
 | eino               | https://github.com/cloudwego/eino                 | v0.3.51     | -           |
-| fasthttp           | https://github.com/valyala/fasthttp               | v1.45.0     | v1.65.1     |
+| fasthttp           | https://github.com/valyala/fasthttp               | v1.45.0     | -           |
 | fiber              | https://github.com/gofiber/fiber                  | v2.43.0     | v2.52.13    |
 | franz-go           | https://github.com/twmb/franz-go                  | v1.18.0     | -           |
 | gin                | https://github.com/gin-gonic/gin                  | v1.7.0      | v1.10.2     |
@@ -42,6 +43,7 @@
 | meguminnnnnnnnn-openai | https://github.com/meguminnnnnnnnn/go-openai  | -           | -           |
 | mongodb            | https://github.com/mongodb/mongo-go-driver        | v1.11.1     | v1.15.2     |
 | mqtt               | https://github.com/mochi-mqtt/server              | v2.6.4      | -           |
+| neo4j              | https://github.com/neo4j/neo4j-go-driver        | v6.0.0      | v6.2.0      |
 | nacos              | https://github.com/nacos-group/nacos-sdk-go/v2    | v2.0.0      | v2.3.0      |
 | net/http           | https://pkg.go.dev/net/http                       | -           | -           |
 | new-api            | https://github.com/QuantumNous/new-api            | -           | -           |

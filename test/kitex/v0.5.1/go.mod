@@ -1,8 +1,6 @@
 module kitex/v0.5.1
 
-go 1.24.0
-
-toolchain go1.24.11
+go 1.25.0
 
 replace github.com/alibaba/loongsuite-go => ../../../
 
@@ -12,13 +10,14 @@ replace github.com/alibaba/loongsuite-go/test/verifier => ../../../test/verifier
 // APIs to require context.Context, but kitex's bthrift implementation in some
 // versions still targets the older signatures (see TestLatest3/kitex-latestdepth-test).
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
+
 replace github.com/alibaba/loongsuite-go/pkg => ../../../pkg
 
 require (
 	github.com/alibaba/loongsuite-go/test/verifier v0.0.0-00010101000000-000000000000
 	github.com/apache/thrift v0.13.0
 	github.com/cloudwego/kitex v0.5.1
-	go.opentelemetry.io/otel/sdk v1.40.0
+	go.opentelemetry.io/otel/sdk v1.45.0
 )
 
 require (
@@ -33,7 +32,7 @@ require (
 	github.com/cloudwego/netpoll v0.3.2 // indirect
 	github.com/cloudwego/thriftgo v0.2.8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
@@ -49,16 +48,16 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel v1.40.0 // indirect
-	go.opentelemetry.io/otel/metric v1.40.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
-	go.opentelemetry.io/otel/trace v1.40.0 // indirect
+	go.opentelemetry.io/otel v1.45.0 // indirect
+	go.opentelemetry.io/otel/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/genproto v0.0.0-20210513213006-bf773b8c8384 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
