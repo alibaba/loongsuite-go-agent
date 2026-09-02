@@ -26,6 +26,7 @@ type fiberv2Request struct {
 	isTls          bool
 	port           int
 	header         *fasthttp.RequestHeader
+	routeTemplate  string
 	requestHeaders string
 	requestBody    string
 }

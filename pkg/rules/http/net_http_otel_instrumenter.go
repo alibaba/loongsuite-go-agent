@@ -210,7 +210,7 @@ func (n netHttpServerAttrsGetter) GetNetworkPeerPort(request *netHttpRequest, re
 }
 
 func (n netHttpServerAttrsGetter) GetHttpRoute(request *netHttpRequest) string {
-	return request.url.Path
+	return request.routeTemplate
 }
 
 func BuildNetHttpClientOtelInstrumenter() *instrumenter.PropagatingToDownstreamInstrumenter[*netHttpRequest, *netHttpResponse] {

@@ -7,10 +7,12 @@ replace github.com/alibaba/loongsuite-go/pkg => ../../../pkg
 require (
 	github.com/alibaba/loongsuite-go/pkg v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.10.0
-	go.opentelemetry.io/otel/sdk v1.45.0
 )
 
+require go.opentelemetry.io/otel/sdk v1.45.0 // indirect
+
 require (
+	github.com/alibaba/loongsuite-go/pkg/rules/http v0.0.0-00010101000000-000000000000
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.1 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
@@ -46,3 +48,5 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/alibaba/loongsuite-go/pkg/rules/http => ../http

@@ -18,7 +18,7 @@ import (
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
-	"go.opentelemetry.io/otel/sdk/trace"
+	otelhttp "github.com/alibaba/loongsuite-go/pkg/rules/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,8 +31,10 @@ func htmlOnEnter(call api.CallContext, c *gin.Context, code int, name string, ob
 	if c == nil {
 		return
 	}
-	lcs := trace.LocalRootSpanFromGLS()
-	if lcs != nil && c.FullPath() != "" && c.Request != nil && c.Request.URL != nil && (c.FullPath() != c.Request.URL.Path) {
-		lcs.SetName(c.FullPath())
+	route := c.FullPath()
+	if route == "" || c.Request == nil {
+		return
 	}
+	otelhttp.SetServerRouteTemplate(c.Request, route)
+	otelhttp.UpdateServerSpanName(c.Request.Method, route)
 }

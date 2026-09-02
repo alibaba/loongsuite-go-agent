@@ -107,3 +107,28 @@ listener is replaced by `DbClientMetrics("nosql.elasticsearch")`.
   latency. Remove dashboards that relied on ES-scoped `http.server.request.duration`.
 - **No dual-write:** The previous `http.server.*` series on client spans was a
   semconv mismatch and is not preserved during a deprecation window.
+
+## HTTP server route templates: `http.route` is now template-only
+
+HTTP server instrumentation now aligns `http.route` and server span names with
+OpenTelemetry HTTP semantic conventions:
+
+- `http.route` is emitted only when the framework/router provides a
+  low-cardinality route template.
+- Server span names use `{method} {route}` when a route template exists.
+- When no route template exists, server span names fall back to `{method}` and
+  `http.route` is omitted.
+
+| Scenario | Before | After |
+| -------- | ------ | ----- |
+| net/http bare handler or unmatched request | `http.route=url.path`, span name like `GET /users/123` | `http.route` omitted, span name `GET` |
+| fasthttp bare handler | `http.route=url.path`, span name like `GET /users/123` | `http.route` omitted, span name `GET` |
+| templated routers (ServeMux pattern / gin / echo / mux / iris / fiber / hertz / go-restful) | path-like values could differ by framework | `http.route` uses the route template and span name uses `{method} {route}` |
+
+- **Impact:** Dashboards and alerts grouping by `http.route` or full server span
+  names may lose dimensions for non-templated handlers and will aggregate by
+  template instead of raw path for templated routers.
+- **Migration:** Use `url.path` for path-level debugging. Use templated
+  `http.route` for aggregation. Update queries that assumed `http.route` was
+  always present, and update span-name filters from `GET /path` to `GET` for
+  non-templated handlers.

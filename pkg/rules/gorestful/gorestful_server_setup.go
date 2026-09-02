@@ -17,11 +17,12 @@ package gorestful
 import (
 	"net/http"
 	"os"
+	"sync"
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	otelhttp "github.com/alibaba/loongsuite-go/pkg/rules/http"
 	restful "github.com/emicklei/go-restful/v3"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 type goRestfulInnerEnabler struct {
@@ -34,9 +35,20 @@ func (g goRestfulInnerEnabler) Enable() bool {
 
 var goRestfulEnabler = goRestfulInnerEnabler{os.Getenv("OTEL_INSTRUMENTATION_GORESTFUL_ENABLED") != "false"}
 
+var registeredContainers sync.Map
+
+func ensureFilterRegistered(c *restful.Container) {
+	if c == nil {
+		return
+	}
+	if _, loaded := registeredContainers.LoadOrStore(c, struct{}{}); !loaded {
+		c.Filter(filterRest)
+	}
+}
+
 //go:linkname restContainerAddOnEnter github.com/emicklei/go-restful/v3.restContainerAddOnEnter
 func restContainerAddOnEnter(call api.CallContext, c *restful.Container, service *restful.WebService) {
-	c.Filter(filterRest)
+	ensureFilterRegistered(c)
 	call.SetParam(0, c)
 }
 
@@ -47,7 +59,7 @@ func restContainerAddOnExit(call api.CallContext, c *restful.Container) {
 
 //go:linkname restContainerDispatchOnEnter github.com/emicklei/go-restful/v3.restContainerDispatchOnEnter
 func restContainerDispatchOnEnter(call api.CallContext, c *restful.Container, httpWriter http.ResponseWriter, httpRequest *http.Request) {
-	c.Filter(filterRest)
+	ensureFilterRegistered(c)
 	call.SetParam(0, c)
 }
 
@@ -58,7 +70,7 @@ func restContainerDispatchOnExit(call api.CallContext) {
 
 //go:linkname restContainerHandleOnEnter github.com/emicklei/go-restful/v3.restContainerHandleOnEnter
 func restContainerHandleOnEnter(call api.CallContext, c *restful.Container, pattern string, handler http.Handler) {
-	c.Filter(filterRest)
+	ensureFilterRegistered(c)
 	call.SetParam(0, c)
 }
 
@@ -68,14 +80,12 @@ func restContainerHandleOnExit(call api.CallContext) {
 }
 
 var filterRest = func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	if !goRestfulEnabler.Enable() {
-		return
+	if goRestfulEnabler.Enable() && req != nil {
+		route := req.SelectedRoutePath()
+		if route != "" && req.Request != nil {
+			otelhttp.SetServerRouteTemplate(req.Request, route)
+			otelhttp.UpdateServerSpanName(req.Request.Method, route)
+		}
 	}
-	if req == nil {
-		return
-	}
-	lcs := trace.LocalRootSpanFromGLS()
-	if lcs != nil && req.SelectedRoutePath() != "" && req.Request != nil && req.Request.URL != nil && (req.SelectedRoutePath() != req.Request.URL.Path) {
-		lcs.SetName(req.SelectedRoutePath())
-	}
+	chain.ProcessFilter(req, resp)
 }

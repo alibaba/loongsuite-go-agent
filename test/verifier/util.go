@@ -35,6 +35,19 @@ func GetAttribute(attrs []attribute.KeyValue, name string) attribute.Value {
 	return attribute.Value{}
 }
 
+func HasAttribute(attrs []attribute.KeyValue, name string) bool {
+	for _, attr := range attrs {
+		if string(attr.Key) == name {
+			return true
+		}
+	}
+	return false
+}
+
+func AssertAttributeMissing(attrs []attribute.KeyValue, name string) {
+	Assert(!HasAttribute(attrs, name), "Expected attribute %s to be absent, but it was present", name)
+}
+
 // Get all attrs with a prefix like `db.query.parameter.0` with `db.query.parameter`
 func GetAttributesWithPrefix(attrs []attribute.KeyValue, prefix string) []string {
 	var results []string
@@ -83,9 +96,9 @@ func SliceAttrsAssert(expectAttrs []any, actualAttrs []string, format string, ar
 	}
 
 	mockT := &struct {
-        assert.TestingT
-    }{}
-    mockT.TestingT = mockTestingT{}
+		assert.TestingT
+	}{}
+	mockT.TestingT = mockTestingT{}
 
 	if !assert.ElementsMatch(mockT, actualAttrs, convertedSlice) {
 		errorMsg := fmt.Sprintf(format, args...)

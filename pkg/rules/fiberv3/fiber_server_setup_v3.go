@@ -22,6 +22,7 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/api"
 	fiber "github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 var fiberv3ServerInstrumenter = BuildFiberV3ServerOtelInstrumenter()
@@ -63,6 +64,12 @@ func fiberHttpOnExitv3(call api.CallContext) {
 	request, ok := data["request"].(*fiberv3Request)
 	if !ok {
 		return
+	}
+	request.routeTemplate = takeFiberRouteTemplate(ctx)
+	if request.routeTemplate != "" {
+		if lcs := trace.LocalRootSpanFromGLS(); lcs != nil {
+			lcs.SetName(request.method + " " + request.routeTemplate)
+		}
 	}
 	fiberv3ServerInstrumenter.End(ctxSpan, request, &fiberv3Response{
 		statusCode:   ctx.Response.StatusCode(),

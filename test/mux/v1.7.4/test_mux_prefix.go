@@ -48,6 +48,6 @@ func main() {
 	fmt.Println(string(body))
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "http://127.0.0.1:8080/1/countries/2", "http", "1.1", "tcp", "ipv4", "", "127.0.0.1:8080", 200, 0, 8080)
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "/{name}/countries/{country}", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8080", "Go-http-client/1.1", "http", "/1/countries/2", "", "/{name}/countries/{country}", 200)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /{name}/countries/{country}", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8080", "Go-http-client/1.1", "http", "/1/countries/2", "", "/{name}/countries/{country}", 200)
 	}, 1)
 }

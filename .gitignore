@@ -142,3 +142,26 @@ docs/.vitepress/cache
 test/build/go.work.sum
 test/dubbo/v3.3.0/test_dubbo_basictest.test
 test/dubbo/v3.3.0/test_dubbo_basic
+
+# HTTP route template integration test binaries
+test/nethttp/test_http_route_pattern
+test/nethttp/test_http_route_static_pattern
+test/nethttp/test_http_route_cases
+test/nethttp/test_http_route_metrics
+test/nethttp/test_http_route_static_metrics
+test/nethttp/test_http_route_unavailable
+test/nethttp/test_http_route_unavailable_metrics
+test/gin/test_gin_pattern
+test/gin/test_gin_static
+test/iris/test_iris_pattern
+test/gorestful/test_restful_pattern
+test/mux/v1.3.0/test_mux_pattern
+test/fiberv2/v2.43.0/fiber_route_pattern
+test/fiberv2/v2.43.0/fiber_route_static
+test/fiberv2/v2.43.0/fiber_route_metrics
+test/fiberv3/v3.0.0/fiber_route_pattern
+test/fiberv3/v3.0.0/fiber_route_static
+test/fiberv3/v3.0.0/fiber_route_metrics
+test/fiberv3/v3.0.0/fiber_custom_ctx_route
+test/fiberv3/v3.0.0/fiber_http
+test/gin/test_gin_html

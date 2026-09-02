@@ -27,6 +27,6 @@ func main() {
 	GetDeadline()
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "http://127.0.0.1:8888/ping", "http", "", "tcp", "ipv4", "", "127.0.0.1:8888", 200, 0, 8888)
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "/ping", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/ping", "", "/ping", 200)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /ping", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8888", "Host", "http", "/ping", "", "/ping", 200)
 	}, 1)
 }

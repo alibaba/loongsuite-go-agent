@@ -91,3 +91,23 @@ Elasticsearch 插件此前错误注册了 `HttpServerMetrics("elasticsearch.clie
   `http.server.request.duration` 的看板需更新或移除。
 - **不做双写：** 原先在客户端 span 上导出的 `http.server.*` 不符合语义约定，不会在
   弃用窗口内继续保留。
+
+## HTTP 服务端路由模板：`http.route` 现在仅在有模板时导出
+
+HTTP 服务端埋点现在按 OpenTelemetry HTTP 语义约定对齐 `http.route` 与服务端 span 名：
+
+- 只有当框架/路由器提供低基数 route template 时，才导出 `http.route`。
+- 有 route template 时，服务端 span 名使用 `{method} {route}`。
+- 没有 route template 时，服务端 span 名退化为 `{method}`，并省略 `http.route`。
+
+| 场景 | 之前 | 之后 |
+| ---- | ---- | ---- |
+| net/http 裸 handler 或未匹配请求 | `http.route=url.path`，span 名类似 `GET /users/123` | 省略 `http.route`，span 名为 `GET` |
+| fasthttp 裸 handler | `http.route=url.path`，span 名类似 `GET /users/123` | 省略 `http.route`，span 名为 `GET` |
+| 带模板的路由框架（ServeMux pattern / gin / echo / mux / iris / fiber / hertz / go-restful） | 各框架的 path 行为可能不同 | `http.route` 统一使用 route template，span 名统一为 `{method} {route}` |
+
+- **影响：** 依赖 `http.route` 或完整服务端 span 名分组的看板/告警，在非模板 handler 上
+  可能丢失维度；带模板的路由会从按原始 path 聚合变为按模板聚合。
+- **迁移：** 明细排查请使用 `url.path`；聚合统计请使用模板化后的 `http.route`。
+  同时更新那些默认 `http.route` 一定存在的查询，并将非模板 handler 的 span 名过滤
+  从 `GET /path` 调整为 `GET`。

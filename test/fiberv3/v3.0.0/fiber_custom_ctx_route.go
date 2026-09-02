@@ -1,0 +1,78 @@
+// Copyright (c) 2026 Alibaba Group Holding Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"strconv"
+	"time"
+
+	"github.com/alibaba/loongsuite-go/test/verifier"
+	fiber "github.com/gofiber/fiber/v3"
+	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+)
+
+var port int
+
+type customCtx struct {
+	*fiber.DefaultCtx
+}
+
+func requestCustomCtxRouteServer() {
+	client := &fasthttp.Client{}
+	reqURL := "http://127.0.0.1:" + strconv.Itoa(port) + "/users/123"
+
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	defer func() {
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(resp)
+	}()
+
+	req.SetRequestURI(reqURL)
+	req.Header.SetMethod(fasthttp.MethodGet)
+	if err := client.Do(req, resp); err != nil {
+		panic(err)
+	}
+}
+
+func setupCustomCtxRouteServer() {
+	app := fiber.NewWithCustomCtx(func(app *fiber.App) fiber.CustomCtx {
+		return &customCtx{DefaultCtx: fiber.NewDefaultCtx(app)}
+	})
+	app.Get("/users/:id", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).SendString("ok")
+	})
+
+	var err error
+	port, err = verifier.GetFreePort()
+	if err != nil {
+		panic(err)
+	}
+	if err := app.Listen("127.0.0.1:" + strconv.Itoa(port)); err != nil {
+		panic(err)
+	}
+}
+
+func main() {
+	go setupCustomCtxRouteServer()
+	time.Sleep(2 * time.Second)
+	requestCustomCtxRouteServer()
+	peerAddr := "127.0.0.1:" + strconv.Itoa(port)
+	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
+		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "http://"+peerAddr+"/users/123", "http", "", "tcp", "ipv4", "", peerAddr, 200, 0, int64(port))
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /users/:id", "GET", "http", "tcp", "ipv4", "", peerAddr, "fasthttp", "http", "/users/123", "", "/users/:id", 200)
+	}, 1)
+}

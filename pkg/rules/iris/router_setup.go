@@ -18,21 +18,50 @@ import (
 	_ "unsafe"
 
 	"github.com/alibaba/loongsuite-go/pkg/api"
+	otelhttp "github.com/alibaba/loongsuite-go/pkg/rules/http"
 	iContext "github.com/kataras/iris/v12/context"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 //go:linkname irisHttpOnEnter github.com/kataras/iris/v12/core/router.irisHttpOnEnter
 func irisHttpOnEnter(call api.CallContext, _ interface{}, iCtx *iContext.Context) {
-	if !irisEnabler.Enable() {
-		return
-	}
-	if iCtx == nil {
+	if !irisEnabler.Enable() || iCtx == nil {
 		return
 	}
 	r := iCtx.Request()
-	lcs := trace.LocalRootSpanFromGLS()
-	if lcs != nil && r != nil && iCtx.Path() != "" && r.URL != nil && (iCtx.Path() != r.URL.Path) {
-		lcs.SetName(iCtx.Path())
+	if r == nil || r.URL == nil {
+		return
 	}
+	route := iCtx.Path()
+	if !shouldUseIrisFallbackRoute(route, r.URL.Path) {
+		return
+	}
+	otelhttp.SetServerRouteTemplate(r, route)
+	otelhttp.UpdateServerSpanName(r.Method, route)
+}
+
+func shouldUseIrisFallbackRoute(route, requestPath string) bool {
+	return route != "" && route != requestPath
+}
+
+//go:linkname irisSetCurrentRouteOnEnter github.com/kataras/iris/v12/context.irisSetCurrentRouteOnEnter
+func irisSetCurrentRouteOnEnter(call api.CallContext, iCtx *iContext.Context, curr iContext.RouteReadOnly) {
+	if !irisEnabler.Enable() || iCtx == nil || curr == nil {
+		return
+	}
+	r := iCtx.Request()
+	if r == nil {
+		return
+	}
+	var route string
+	tmpl := curr.Tmpl()
+	if tmpl.Src != "" {
+		route = tmpl.Src
+	} else if curr.Path() != "" {
+		route = curr.Path()
+	}
+	if route == "" {
+		return
+	}
+	otelhttp.SetServerRouteTemplate(r, route)
+	otelhttp.UpdateServerSpanName(r.Method, route)
 }

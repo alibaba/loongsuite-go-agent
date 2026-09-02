@@ -19,11 +19,8 @@ import (
 	"github.com/alibaba/loongsuite-go/pkg/inst-api-semconv/instrumenter/net"
 	"github.com/alibaba/loongsuite-go/pkg/inst-api/utils"
 	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
-	"go.opentelemetry.io/otel/trace"
 	"strconv"
-	"strings"
 )
 
 // TODO: remove server.address and put it into NetworkAttributesExtractor
@@ -108,9 +105,11 @@ func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnEnd(at
 		Key:   semconv.NetworkProtocolVersionKey,
 		Value: attribute.StringValue(protocolVersion),
 	})
-	
-	// 客户端由于有特有的 hasResponse 属性判断、status_code 哨兵值逻辑以及特定的 error.type 覆盖契约，
-	// 因而此处特意与服务端通用的 Base.OnEnd 进行了逻辑解耦，独立实现。
+
+	// The client side has special handling: a unique hasResponse detection, a sentinel status_code filling
+	// strategy, and a specific error.type override contract.
+	// Therefore this logic is intentionally decoupled from the shared server Base.OnEnd and implemented
+	// independently.
 	if hasResponse {
 		statusCode := getter.GetHttpResponseStatusCode(request, response, err)
 		attributes = append(attributes, attribute.KeyValue{
@@ -118,7 +117,7 @@ func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnEnd(at
 			Value: attribute.IntValue(statusCode),
 		})
 	} else {
-		// Critical #3: 当没有真实响应时，使用哨兵值 0 填充 status_code，保障看板维度兼容
+		// Critical #3: when there is no real response, use sentinel status_code=0 to keep dashboard dimensions compatible.
 		attributes = append(attributes, attribute.KeyValue{
 			Key:   semconv.HTTPResponseStatusCodeKey,
 			Value: attribute.IntValue(0),
@@ -129,12 +128,12 @@ func (h *HttpClientAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2]) OnEnd(at
 	if errorType == "" {
 		if hasResponse {
 			statusCode := getter.GetHttpResponseStatusCode(request, response, err)
-			// Critical #1: 客户端 4xx/5xx (或无效状态码) 在无 err 时设置 status code 为 error.type
+			// Critical #1: for client 4xx/5xx (or invalid status codes), when there is no err, use the status code as error.type.
 			if statusCode >= 400 || statusCode < 100 {
 				errorType = strconv.Itoa(statusCode)
 			}
 		}
-		// 对齐上游设计，只要有底层的 Go 错误产生，以底层 Go 错误类型优先覆盖
+		// Align with upstream design: if there is an underlying Go error, prefer the underlying Go error type to override.
 		if err != nil {
 			errorType = NormalizeHTTPClientErrorType(err)
 		}
@@ -205,13 +204,8 @@ func (h *HttpServerAttrsExtractor[REQUEST, RESPONSE, GETTER1, GETTER2, GETTER3])
 		}
 	}
 
-	span := trace.SpanFromContext(context)
-	localRootSpan, ok := span.(sdktrace.ReadOnlySpan)
-	if ok && span.IsRecording() {
-		route := h.Base.HttpGetter.GetHttpRoute(request)
-		if !strings.Contains(localRootSpan.Name(), route) {
-			route = localRootSpan.Name()
-		}
+	route := ResolveHttpServerRoute(h.Base.HttpGetter, request)
+	if route != "" {
 		attributes = append(attributes, attribute.KeyValue{
 			Key:   semconv.HTTPRouteKey,
 			Value: attribute.StringValue(route),

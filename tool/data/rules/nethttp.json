@@ -14,5 +14,12 @@
     "OnEnter": "serverOnEnter",
     "OnExit": "serverOnExit",
     "Path": "github.com/alibaba/loongsuite-go/pkg/rules/http"
+  },
+  {
+    "ImportPath": "net/http",
+    "Function": "ServeHTTP",
+    "ReceiverType": "\\*ServeMux",
+    "OnExit": "serveMuxOnExit",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/http"
   }
 ]

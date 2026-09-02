@@ -72,6 +72,6 @@ func main() {
 	// verify trace
 	verifier.WaitAndAssertTraces(func(stubs []tracetest.SpanStubs) {
 		verifier.VerifyHttpClientAttributes(stubs[0][0], "GET", "GET", "http://127.0.0.1:8080/users/123", "http", "1.1", "tcp", "ipv4", "", "127.0.0.1:8080", 200, 0, 8080)
-		verifier.VerifyHttpServerAttributes(stubs[0][1], "/users/{user-id}", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8080", "Go-http-client/1.1", "http", "/users/123", "", "/users/{user-id}", 200)
+		verifier.VerifyHttpServerAttributes(stubs[0][1], "GET /users/{user-id}", "GET", "http", "tcp", "ipv4", "", "127.0.0.1:8080", "Go-http-client/1.1", "http", "/users/123", "", "/users/{user-id}", 200)
 	}, 1)
 }

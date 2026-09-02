@@ -108,7 +108,7 @@ func (n fiberv2ServerAttrsGetter) GetNetworkPeerPort(request *fiberv2Request, re
 	return port
 }
 func (n fiberv2ServerAttrsGetter) GetHttpRoute(request *fiberv2Request) string {
-	return request.url.Path
+	return request.routeTemplate
 }
 
 type fiberv2RequestCarrier struct {

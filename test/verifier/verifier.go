@@ -72,6 +72,10 @@ func VerifyHttpClientMetricsAttributes(attrs []attribute.KeyValue, method, serve
 	Assert(GetAttribute(attrs, "http.response.status_code").AsInt64() == int64(statusCode), "Except status code to be %d, got %d", statusCode, GetAttribute(attrs, "http.response.status_code").AsInt64())
 }
 
+// OmitHttpRoute is a sentinel for VerifyHttpServerAttributes and
+// VerifyHttpServerMetricsAttributes to assert http.route is absent.
+const OmitHttpRoute = "<omitted>"
+
 func VerifyHttpServerAttributes(span tracetest.SpanStub, name, method, protocolName, networkTransport, networkType, localAddr, peerAddr, agent, scheme, path, query, route string, statusCode int64) {
 	Assert(span.SpanKind == trace.SpanKindServer, "Expect to be client span, got %d", span.SpanKind)
 	Assert(span.Name == name, "Except client span name to be %s, got %s", name, span.Name)
@@ -85,13 +89,21 @@ func VerifyHttpServerAttributes(span tracetest.SpanStub, name, method, protocolN
 	Assert(GetAttribute(span.Attributes, "url.scheme").AsString() == scheme, "Except url scheme to be %s, got %s", scheme, GetAttribute(span.Attributes, "url.scheme").AsString())
 	Assert(GetAttribute(span.Attributes, "url.path").AsString() == path, "Except url path to be %s, got %s", path, GetAttribute(span.Attributes, "url.path").AsString())
 	Assert(GetAttribute(span.Attributes, "url.query").AsString() == query, "Except url query to be %s, got %s", query, GetAttribute(span.Attributes, "url.query").AsString())
-	Assert(GetAttribute(span.Attributes, "http.route").AsString() == route, "Except http route to be %s, got %s", route, GetAttribute(span.Attributes, "http.route").AsString())
+	if route == OmitHttpRoute {
+		AssertAttributeMissing(span.Attributes, "http.route")
+	} else {
+		Assert(GetAttribute(span.Attributes, "http.route").AsString() == route, "Except http route to be %s, got %s", route, GetAttribute(span.Attributes, "http.route").AsString())
+	}
 	Assert(GetAttribute(span.Attributes, "http.response.status_code").AsInt64() == statusCode, "Except status code to be %d, got %d", statusCode, GetAttribute(span.Attributes, "http.response.status_code").AsInt64())
 }
 
 func VerifyHttpServerMetricsAttributes(attrs []attribute.KeyValue, method, httpRoute, errorType, protocolName, protocolVersion, urlScheme string, statusCode int) {
 	Assert(GetAttribute(attrs, "http.request.method").AsString() == method, "Except method to be %s, got %s", method, GetAttribute(attrs, "http.request.method").AsString())
-	Assert(GetAttribute(attrs, "http.route").AsString() == httpRoute, "Except http.route to be %s, got %s", httpRoute, GetAttribute(attrs, "http.route").AsString())
+	if httpRoute == OmitHttpRoute {
+		AssertAttributeMissing(attrs, "http.route")
+	} else {
+		Assert(GetAttribute(attrs, "http.route").AsString() == httpRoute, "Except http.route to be %s, got %s", httpRoute, GetAttribute(attrs, "http.route").AsString())
+	}
 	Assert(GetAttribute(attrs, "error.type").AsString() == errorType, "Except error.type to be %s, got %s", errorType, GetAttribute(attrs, "error.type").AsString())
 	Assert(GetAttribute(attrs, "network.protocol.name").AsString() == protocolName, "Except network.protocol.name to be %s, got %s", protocolName, GetAttribute(attrs, "network.protocol.name").AsString())
 	Assert(GetAttribute(attrs, "network.protocol.version").AsString() == protocolVersion, "Except network.protocol.version to be %s, got %s", protocolVersion, GetAttribute(attrs, "network.protocol.version").AsString())

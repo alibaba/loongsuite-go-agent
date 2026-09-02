@@ -1,9 +1,18 @@
-[{
-  "Version": "[12.2.0,12.2.12)",
-  "ImportPath": "github.com/kataras/iris/v12/core/router",
-  "Function": "HandleRequest",
-  "ReceiverType": "\\*routerHandler",
-  "OnEnter": "irisHttpOnEnter",
-  "Path": "github.com/alibaba/loongsuite-go/pkg/rules/iris"
-}
+[
+  {
+    "Version": "[12.2.0,12.2.12)",
+    "ImportPath": "github.com/kataras/iris/v12/core/router",
+    "Function": "HandleRequest",
+    "ReceiverType": "\\*routerHandler",
+    "OnEnter": "irisHttpOnEnter",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/iris"
+  },
+  {
+    "Version": "[12.2.0,12.2.12)",
+    "ImportPath": "github.com/kataras/iris/v12/context",
+    "Function": "SetCurrentRoute",
+    "ReceiverType": "\\*Context",
+    "OnEnter": "irisSetCurrentRouteOnEnter",
+    "Path": "github.com/alibaba/loongsuite-go/pkg/rules/iris"
+  }
 ]
