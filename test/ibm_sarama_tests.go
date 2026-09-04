@@ -26,7 +26,17 @@ func init() {
 		NewGeneralTestCase("ibm-sarama-basic-test", ibmSaramaModuleName, "1.40.0", "", "1.22.0", "", TestIbmSaramaBasic),
 		NewGeneralTestCase("ibm-sarama-async-produce-test", ibmSaramaModuleName, "1.40.0", "", "1.22.0", "", TestIbmSaramaAsyncProduce),
 		NewGeneralTestCase("ibm-sarama-sync-batch-produce-test", ibmSaramaModuleName, "1.40.0", "", "1.22.0", "", TestIbmSaramaSyncBatchProduce),
+		NewGeneralTestCase("ibm-sarama-concurrent-sync-producer-test", ibmSaramaModuleName, "1.40.0", "", "1.22.0", "", TestIbmSaramaConcurrentSyncProducer),
 	)
+}
+
+func TestIbmSaramaConcurrentSyncProducer(t *testing.T, env ...string) {
+	containers := initKafkaContainer(t)
+	defer containers.CleanupContainers(context.Background())
+	UseApp("ibm-sarama/v1.40.0")
+	RunGoBuild(t, "go", "build", "test_concurrent_sync_producer.go", "base.go")
+	env = append(env, "KAFKA_ADDR="+containers.KafkaAddress)
+	RunApp(t, "test_concurrent_sync_producer", env...)
 }
 
 func TestIbmSaramaBasic(t *testing.T, env ...string) {
