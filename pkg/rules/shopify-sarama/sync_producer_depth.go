@@ -1,5 +1,3 @@
-//go:build ignore
-
 // Copyright (c) 2026 Alibaba Group Holding Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
