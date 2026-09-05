@@ -18,7 +18,6 @@ import (
 	"context"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	_ "unsafe"
 
 	"github.com/Shopify/sarama"
@@ -30,14 +29,12 @@ import (
 
 const producerContextCacheMax = 16384
 
-var inSyncMode atomic.Bool
-
 //go:linkname newAsyncProducerOnEnter github.com/Shopify/sarama.newAsyncProducerOnEnter
 func newAsyncProducerOnEnter(call api.CallContext, client sarama.Client) {
 	if !saramaEnabler.Enable() {
 		return
 	}
-	if inSyncMode.Load() {
+	if syncProducerCallDepthActive() {
 		return
 	}
 	data := make(map[string]interface{}, 1)
@@ -50,7 +47,7 @@ func newAsyncProducerOnExit(call api.CallContext, p sarama.AsyncProducer, err er
 	if !saramaEnabler.Enable() {
 		return
 	}
-	if inSyncMode.Load() {
+	if syncProducerCallDepthActive() {
 		return
 	}
 	if err != nil || call.GetData() == nil {
@@ -217,7 +214,7 @@ func newSyncProducerOnEnter(call api.CallContext, addrs []string, config *sarama
 	if !saramaEnabler.Enable() {
 		return
 	}
-	inSyncMode.Store(true)
+	syncProducerCallDepthEnter()
 	data := make(map[string]interface{}, 1)
 	data["saramaConfig"] = config
 	call.SetData(data)
@@ -225,10 +222,13 @@ func newSyncProducerOnEnter(call api.CallContext, addrs []string, config *sarama
 
 //go:linkname newSyncProducerOnExit github.com/Shopify/sarama.newSyncProducerOnExit
 func newSyncProducerOnExit(call api.CallContext, producer sarama.SyncProducer, err error) {
-	if !saramaEnabler.Enable() || call.GetData() == nil {
+	if call.GetData() == nil {
 		return
 	}
-	defer inSyncMode.Store(false)
+	defer syncProducerCallDepthExit()
+	if !saramaEnabler.Enable() {
+		return
+	}
 	if err != nil {
 		return
 	}
@@ -256,7 +256,7 @@ func newSyncProducerFromClientOnEnter(call api.CallContext, client sarama.Client
 	if !saramaEnabler.Enable() {
 		return
 	}
-	inSyncMode.Store(true)
+	syncProducerCallDepthEnter()
 	data := make(map[string]interface{}, 1)
 	data["saramaConfig"] = client.Config()
 	call.SetData(data)
@@ -264,10 +264,13 @@ func newSyncProducerFromClientOnEnter(call api.CallContext, client sarama.Client
 
 //go:linkname newSyncProducerFromClientOnExit github.com/Shopify/sarama.newSyncProducerFromClientOnExit
 func newSyncProducerFromClientOnExit(call api.CallContext, producer sarama.SyncProducer, err error) {
-	if !saramaEnabler.Enable() || call.GetData() == nil {
+	if call.GetData() == nil {
 		return
 	}
-	defer inSyncMode.Store(false)
+	defer syncProducerCallDepthExit()
+	if !saramaEnabler.Enable() {
+		return
+	}
 	if err != nil {
 		return
 	}

@@ -36,6 +36,15 @@ var otel_set_trace_context_to_gls = _otel_gls_set_trace_context_impl
 //go:linkname otel_set_baggage_container_to_gls otel_set_baggage_container_to_gls
 var otel_set_baggage_container_to_gls = _otel_gls_set_baggage_container_impl
 
+//go:linkname otel_sync_producer_call_depth_enter otel_sync_producer_call_depth_enter
+var otel_sync_producer_call_depth_enter = _otel_sync_producer_call_depth_enter_impl
+
+//go:linkname otel_sync_producer_call_depth_exit otel_sync_producer_call_depth_exit
+var otel_sync_producer_call_depth_exit = _otel_sync_producer_call_depth_exit_impl
+
+//go:linkname otel_sync_producer_call_depth_active otel_sync_producer_call_depth_active
+var otel_sync_producer_call_depth_active = _otel_sync_producer_call_depth_active_impl
+
 //go:nosplit
 func _otel_gls_get_trace_context_impl() interface{} {
 	return getg().m.curg.otel_trace_context
@@ -54,6 +63,21 @@ func _otel_gls_set_trace_context_impl(v interface{}) {
 //go:nosplit
 func _otel_gls_set_baggage_container_impl(v interface{}) {
 	getg().m.curg.otel_baggage_container = v
+}
+
+//go:nosplit
+func _otel_sync_producer_call_depth_enter_impl() {
+	getg().m.curg.otel_sync_producer_call_depth++
+}
+
+//go:nosplit
+func _otel_sync_producer_call_depth_exit_impl() {
+	getg().m.curg.otel_sync_producer_call_depth--
+}
+
+//go:nosplit
+func _otel_sync_producer_call_depth_active_impl() bool {
+	return getg().m.curg.otel_sync_producer_call_depth > 0
 }
 
 type ContextSnapshoter interface {

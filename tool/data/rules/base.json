@@ -13,6 +13,12 @@
   },
   {
     "ImportPath": "runtime",
+    "StructType": "g",
+    "FieldName": "otel_sync_producer_call_depth",
+    "FieldType": "int32"
+  },
+  {
+    "ImportPath": "runtime",
     "Function": "newproc1",
     "OnEnter": "defer func(){ retVal0.otel_trace_context = contextPropagate(callergp.otel_trace_context); retVal0.otel_baggage_container = contextPropagate(callergp.otel_baggage_container); }()",
     "UseRaw": true

@@ -26,7 +26,17 @@ func init() {
 		NewGeneralTestCase("shopify-sarama-basic-test", shopifySaramaModuleName, "1.22.0", "", "1.22.0", "", TestShopifySaramaBasic),
 		NewGeneralTestCase("shopify-sarama-async-produce-test", shopifySaramaModuleName, "1.22.0", "", "1.22.0", "", TestShopifySaramaAsyncProduce),
 		NewGeneralTestCase("shopify-sarama-sync-batch-produce-test", shopifySaramaModuleName, "1.22.0", "", "1.22.0", "", TestShopifySaramaSyncBatchProduce),
+		NewGeneralTestCase("shopify-sarama-concurrent-sync-producer-test", shopifySaramaModuleName, "1.22.0", "", "1.22.0", "", TestShopifySaramaConcurrentSyncProducer),
 	)
+}
+
+func TestShopifySaramaConcurrentSyncProducer(t *testing.T, env ...string) {
+	containers := initKafkaContainer(t)
+	defer containers.CleanupContainers(context.Background())
+	UseApp("shopify-sarama/v1.22.0")
+	RunGoBuild(t, "go", "build", "test_concurrent_sync_producer.go", "base.go")
+	env = append(env, "KAFKA_ADDR="+containers.KafkaAddress)
+	RunApp(t, "test_concurrent_sync_producer", env...)
 }
 
 func TestShopifySaramaBasic(t *testing.T, env ...string) {
